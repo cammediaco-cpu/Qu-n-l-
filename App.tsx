@@ -11,7 +11,6 @@ import ImportProfileModal, { ImportOptions } from './components/ImportProfileMod
 import ProfileManager from './components/ProfileManager';
 import { Schedule, ModalState, AppSettings, Category, ProfileData } from './types';
 import useLocalStorage from './hooks/useLocalStorage';
-import { GoogleGenAI, Modality } from '@google/genai';
 import {
   LOCAL_STORAGE_SCHEDULES_BASE_KEY,
   LOCAL_STORAGE_SETTINGS_BASE_KEY,
@@ -76,37 +75,6 @@ const getRingtonesFromDB = async (): Promise<RingtoneRecord[]> => {
 };
 // =======================================================
 
-// ========= Audio Decoding Utilities =========
-function decode(base64: string): Uint8Array {
-  const binaryString = atob(base64);
-  const len = binaryString.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes;
-}
-
-async function decodeAudioData(
-  data: Uint8Array,
-  ctx: AudioContext,
-  sampleRate: number,
-  numChannels: number,
-): Promise<AudioBuffer> {
-  const dataInt16 = new Int16Array(data.buffer);
-  const frameCount = dataInt16.length / numChannels;
-  const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
-
-  for (let channel = 0; channel < numChannels; channel++) {
-    const channelData = buffer.getChannelData(channel);
-    for (let i = 0; i < frameCount; i++) {
-      channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
-    }
-  }
-  return buffer;
-}
-// ===========================================
-
 interface NotificationPopupData {
   id: string;
   message: string;
@@ -139,13 +107,6 @@ const App: React.FC = () => {
   const [bgIndex, setBgIndex] = useState(() => Math.floor(Math.random() * BACKGROUND_IMAGES.length));
   const appRef = useRef<HTMLDivElement>(null);
   
-  const audioContextRef = useRef<AudioContext | null>(null);
-  useEffect(() => {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-    }
-  }, []);
-
   useEffect(() => {
     // Request notification permission on component mount
     if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
@@ -213,8 +174,6 @@ const App: React.FC = () => {
 
 
   const triggerUnifiedNotification = useCallback(async (speechJobs: { text: string }[]) => {
-    if (!audioContextRef.current) return;
-    
     const ringtoneIdentifier = settings.ringtoneUrl;
     let ringtone = allRingtones.find(r => r.name === ringtoneIdentifier);
     if (!ringtone) {
@@ -233,45 +192,21 @@ const App: React.FC = () => {
 
     const combinedText = speechJobs.map(job => job.text).join('. ');
     if (combinedText.trim().length === 0) return;
+    
+    // Use browser's SpeechSynthesis API
+    const utterance = new SpeechSynthesisUtterance(combinedText);
+    const voices = window.speechSynthesis.getVoices();
+    const selectedVoice = voices.find(v => v.voiceURI === settings.voiceURI);
 
-    try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash-preview-tts",
-        contents: [{ parts: [{ text: combinedText }] }],
-        config: {
-            responseModalities: [Modality.AUDIO],
-            speechConfig: {
-                voiceConfig: {
-                  prebuiltVoiceConfig: { voiceName: settings.geminiVoice },
-                },
-            },
-        },
-      });
-      
-      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-      if (base64Audio) {
-        const audioBuffer = await decodeAudioData(
-            decode(base64Audio),
-            audioContextRef.current,
-            24000,
-            1,
-        );
-        
-        setTimeout(() => {
-            if (!audioContextRef.current) return;
-            const source = audioContextRef.current.createBufferSource();
-            source.buffer = audioBuffer;
-            const gainNode = audioContextRef.current.createGain();
-            gainNode.gain.value = settings.volume;
-            source.connect(gainNode);
-            gainNode.connect(audioContextRef.current.destination);
-            source.start();
-        }, (settings.ringtoneDuration * 1000) + 500);
-      }
-    } catch (error) {
-        console.error("Error generating speech with Gemini:", error);
+    if (selectedVoice) {
+        utterance.voice = selectedVoice;
     }
+    utterance.volume = settings.volume;
+
+    // Schedule speech to play after ringtone with a small delay
+    setTimeout(() => {
+        window.speechSynthesis.speak(utterance);
+    }, (settings.ringtoneDuration * 1000) + 500);
 
   }, [settings, allRingtones]);
   
