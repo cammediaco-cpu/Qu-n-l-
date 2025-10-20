@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef, CSSProperties } from 'react';
 import Clock from './components/Clock';
 import TodayTasks from './components/TodayTasks';
 import Controls from './components/Controls';
@@ -21,6 +21,15 @@ import {
   DEFAULT_RINGTONES,
   translations,
 } from './constants';
+
+const BACKGROUND_IMAGES = [
+  'https://pixabay.com/get/g7509376b0bff3bfc6058c3b509c2017d61dd6bf6b9e35008e6ed06aca3732d0fd78d17b8e5d00245e457df4697db1769.jpg',
+  'https://pixabay.com/get/g158b777f411292ed5a71c05c19e43353af2857fa7be3f651ac5f1feb2eb035e6c1cce46e57c1ce6dcf236e4a7066f643.jpg',
+  'https://pixabay.com/get/g478e67be2590493d049edfa0b6589901ddf9150a76e53ec13c7618557ddfffe8f2e423e5a10b91c6dc20780ea54a0ab9.jpg',
+  'https://pixabay.com/get/gb759b26b217ff3241275795b2023fe12dc53e107b4ba8e3065064dc90f4f01da437089d1255623a1ff24f4b20f2f8140.jpg',
+  'https://pixabay.com/get/gf9c8b34d18523cdb7ec490b1d5b5ba92414150243444dbcb210819fabf6825c3b9e7d43b48455b8562f13cd6728dedbd.jpg',
+  'https://pixabay.com/get/g549aa9e28089b5e3b0827e251e963785dda053688fa1e1da8bd8696f5204103e3fa23f805a7f60234edf1099587360f1.jpg',
+];
 
 // ========= IndexedDB Utilities for Ringtones =========
 const DB_NAME = 'WeeklyScheduleRingtoneDB';
@@ -94,7 +103,16 @@ const App: React.FC = () => {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [pendingImportData, setPendingImportData] = useState<ProfileData | null>(null);
   
+  const [bgIndex, setBgIndex] = useState(() => Math.floor(Math.random() * BACKGROUND_IMAGES.length));
   const appRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setBgIndex(prevIndex => (prevIndex + 1) % BACKGROUND_IMAGES.length);
+    }, 30 * 60 * 1000); // 30 minutes
+
+    return () => clearInterval(intervalId);
+  }, []);
 
   const loadRingtones = useCallback(async () => {
     // Revoke old blob URLs before creating new ones to prevent memory leaks
@@ -423,12 +441,24 @@ const App: React.FC = () => {
     reader.readAsText(file);
   }, []);
 
-  const themeClass = isDarkMode ? 'bg-black text-white' : 'bg-white text-black';
+  const themeClass = isDarkMode ? 'text-white' : 'text-black';
+  const backgroundOverlay = isDarkMode ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.4)';
+  const viewBgClass = isDarkMode ? 'bg-black/30 backdrop-blur-md border border-white/20' : 'bg-white/50 backdrop-blur-md border border-black/20';
+  const footerBgClass = isDarkMode ? 'bg-black/20 backdrop-blur-sm' : 'bg-white/30 backdrop-blur-sm';
+  
+  const appStyle: CSSProperties = {
+    backgroundImage: `linear-gradient(${backgroundOverlay}, ${backgroundOverlay}), url(${BACKGROUND_IMAGES[bgIndex]})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundRepeat: 'no-repeat',
+    transition: 'background-image 1.5s ease-in-out',
+  };
 
   return (
     <div 
         ref={appRef}
         className={`w-screen h-screen flex flex-col cursor-pointer transition-colors duration-500 select-none overflow-hidden ${themeClass}`}
+        style={appStyle}
         onClick={handleToggleTheme}
     >
         <main 
@@ -451,8 +481,8 @@ const App: React.FC = () => {
             </div>
 
             {/* Bottom */}
-            <div className="col-span-2 row-start-2 flex items-center justify-center p-8">
-                 <div className="w-full h-full max-w-7xl flex flex-col">
+            <div className="col-span-2 row-start-2 flex items-center justify-center p-4 sm:p-8">
+                 <div className={`w-full h-full max-w-7xl flex flex-col rounded-xl shadow-lg p-2 sm:p-4 overflow-hidden ${viewBgClass}`}>
                     <WeekView
                         schedules={schedules}
                         categories={categories}
@@ -464,7 +494,7 @@ const App: React.FC = () => {
             </div>
         </main>
       
-        <footer className="cursor-default" onClick={(e) => e.stopPropagation()}>
+        <footer className={`cursor-default p-4 ${footerBgClass}`} onClick={(e) => e.stopPropagation()}>
             <Controls 
                 onAddTask={() => handleOpenModal(null)} 
                 onOpenSettings={() => setIsSettingsOpen(true)}

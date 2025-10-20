@@ -23,7 +23,7 @@ const Controls: React.FC<ControlsProps> = (props) => {
       : 'hover:bg-black/10';
 
     return (
-        <footer className="w-full p-4">
+        <div className="w-full">
             <div className="max-w-4xl mx-auto flex justify-between items-center">
                 <ProfileManager {...props} />
                 <div className="flex items-center gap-4">
@@ -48,7 +48,7 @@ const Controls: React.FC<ControlsProps> = (props) => {
                     </button>
                 </div>
             </div>
-        </footer>
+        </div>
     );
 };
 

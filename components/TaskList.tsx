@@ -13,7 +13,8 @@ interface WeekViewProps {
 const WeekView: React.FC<WeekViewProps> = ({ schedules, categories, onEdit, onDelete, isDarkMode }) => {
   const dayHeaders = ['THỨ HAI', 'THỨ BA', 'THỨ TƯ', 'THỨ NĂM', 'THỨ SÁU', 'THỨ BẢY', 'CHỦ NHẬT'];
   
-  const borderClass = isDarkMode ? 'border-white/30' : 'border-black/30';
+  const borderClass = isDarkMode ? 'border-white/20' : 'border-black/20';
+  const dayCellBg = isDarkMode ? 'bg-black/20' : 'bg-white/10';
 
   const renderSchedules = (daySchedules: Schedule[]) => {
     if (!daySchedules.length) return null;
@@ -33,20 +34,20 @@ const WeekView: React.FC<WeekViewProps> = ({ schedules, categories, onEdit, onDe
     <div className="w-full h-full flex flex-col">
       <div className="grid grid-cols-7 gap-2">
         {dayHeaders.map((dayName) => (
-          <div key={dayName} className={`text-center text-xs p-1 border ${borderClass}`}>
+          <div key={dayName} className="text-center text-xs p-1 font-semibold opacity-80">
             {dayName}
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-2 mt-2 flex-grow min-h-0">
+      <div className="grid grid-cols-7 gap-2 mt-1 flex-grow min-h-0">
         {dayHeaders.map((_, index) => {
           const jsDayIndex = (index + 1) % 7;
           const daySchedules = schedules
             .filter(s => s.day === jsDayIndex)
             .sort((a, b) => a.time.localeCompare(b.time));
           return (
-            <div key={`day-${index}`} className={`border ${borderClass} p-1 overflow-y-auto`}>
+            <div key={`day-${index}`} className={`border ${borderClass} p-1 overflow-y-auto rounded-lg ${dayCellBg}`}>
               {renderSchedules(daySchedules)}
             </div>
           );

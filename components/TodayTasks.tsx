@@ -23,10 +23,12 @@ const TodayTasks: React.FC<TodayTasksProps> = ({ schedules, categories, onToggle
     ? "accent-white"
     : "accent-black";
   
-  const borderClass = isDarkMode ? 'border-white/30' : 'border-black/30';
+  const sectionClass = isDarkMode 
+    ? 'bg-black/30 backdrop-blur-md border border-white/20' 
+    : 'bg-white/50 backdrop-blur-md border border-black/20';
 
   return (
-    <section className={`p-4 border ${borderClass} w-72 transition-colors duration-500`}>
+    <section className={`p-4 rounded-xl shadow-lg w-72 transition-colors duration-500 ${sectionClass}`}>
       <h2 className="text-md font-semibold mb-2 opacity-80">
         {translations.todayTasksTitle}
       </h2>
