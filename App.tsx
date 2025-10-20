@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect, useMemo, useRef, CSSProperties } from 'react';
 import Clock from './components/Clock';
 import TodayTasks from './components/TodayTasks';
@@ -7,6 +8,7 @@ import ScheduleModal from './components/TaskInput';
 import SettingsModal from './components/SettingsModal';
 import NotificationPopup from './components/NotificationPopup';
 import ImportProfileModal, { ImportOptions } from './components/ImportProfileModal';
+import ProfileManager from './components/ProfileManager';
 import { Schedule, ModalState, AppSettings, Category, ProfileData } from './types';
 import useLocalStorage from './hooks/useLocalStorage';
 import {
@@ -23,12 +25,12 @@ import {
 } from './constants';
 
 const BACKGROUND_IMAGES = [
-  'https://pixabay.com/get/g7509376b0bff3bfc6058c3b509c2017d61dd6bf6b9e35008e6ed06aca3732d0fd78d17b8e5d00245e457df4697db1769.jpg',
-  'https://pixabay.com/get/g158b777f411292ed5a71c05c19e43353af2857fa7be3f651ac5f1feb2eb035e6c1cce46e57c1ce6dcf236e4a7066f643.jpg',
-  'https://pixabay.com/get/g478e67be2590493d049edfa0b6589901ddf9150a76e53ec13c7618557ddfffe8f2e423e5a10b91c6dc20780ea54a0ab9.jpg',
-  'https://pixabay.com/get/gb759b26b217ff3241275795b2023fe12dc53e107b4ba8e3065064dc90f4f01da437089d1255623a1ff24f4b20f2f8140.jpg',
-  'https://pixabay.com/get/gf9c8b34d18523cdb7ec490b1d5b5ba92414150243444dbcb210819fabf6825c3b9e7d43b48455b8562f13cd6728dedbd.jpg',
-  'https://pixabay.com/get/g549aa9e28089b5e3b0827e251e963785dda053688fa1e1da8bd8696f5204103e3fa23f805a7f60234edf1099587360f1.jpg',
+  'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?q=80&w=3000&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1444703686981-a3abbc4d4fe3?q=80&w=2940&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=2942&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?q=80&w=2940&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?q=80&w=2940&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1501854140801-50d01698950b?q=80&w=3000&auto=format&fit=crop',
 ];
 
 // ========= IndexedDB Utilities for Ringtones =========
@@ -442,10 +444,9 @@ const App: React.FC = () => {
   }, []);
 
   const themeClass = isDarkMode ? 'text-white' : 'text-black';
-  const backgroundOverlay = isDarkMode ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.4)';
-  const viewBgClass = isDarkMode ? 'bg-black/30 backdrop-blur-md border border-white/20' : 'bg-white/50 backdrop-blur-md border border-black/20';
-  const footerBgClass = isDarkMode ? 'bg-black/20 backdrop-blur-sm' : 'bg-white/30 backdrop-blur-sm';
-  
+  const backgroundOverlay = isDarkMode ? 'rgba(0, 0, 0, 0.4)' : 'rgba(255, 255, 255, 0.2)';
+  const viewBgClass = isDarkMode ? 'bg-black/30 backdrop-blur-xl border border-white/20' : 'bg-white/50 backdrop-blur-xl border border-black/20';
+
   const appStyle: CSSProperties = {
     backgroundImage: `linear-gradient(${backgroundOverlay}, ${backgroundOverlay}), url(${BACKGROUND_IMAGES[bgIndex]})`,
     backgroundSize: 'cover',
@@ -457,20 +458,43 @@ const App: React.FC = () => {
   return (
     <div 
         ref={appRef}
-        className={`w-screen h-screen flex flex-col cursor-pointer transition-colors duration-500 select-none overflow-hidden ${themeClass}`}
+        className={`w-screen h-screen flex items-center justify-center p-4 cursor-pointer transition-colors duration-500 select-none overflow-hidden relative ${themeClass}`}
         style={appStyle}
         onClick={handleToggleTheme}
     >
+      <div 
+        className="w-full h-full max-w-[1920px] max-h-[1080px] aspect-video relative flex flex-col shadow-2xl rounded-2xl overflow-hidden" 
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="absolute top-6 left-6 z-10 cursor-default" onClick={(e) => e.stopPropagation()}>
+           <ProfileManager
+              profiles={profiles}
+              activeProfile={activeProfile}
+              onAddProfile={handleAddProfile}
+              onDeleteProfile={handleDeleteProfile}
+              onSwitchProfile={handleSwitchProfile}
+              onExportProfile={handleExportProfile}
+              onImportProfile={handleImportProfile}
+              isDarkMode={isDarkMode}
+           />
+        </div>
+        <div className="absolute top-6 right-6 z-10 cursor-default" onClick={(e) => e.stopPropagation()}>
+           <Controls 
+              onAddTask={() => handleOpenModal(null)} 
+              onOpenSettings={() => setIsSettingsOpen(true)}
+              isDarkMode={isDarkMode}
+           />
+        </div>
+
         <main 
-            className="flex-grow grid grid-cols-2 grid-rows-2 cursor-default" 
-            onClick={(e) => e.stopPropagation()}
+            className="flex-grow grid grid-cols-2 grid-rows-2 h-full cursor-default"
         >
-            {/* Top Left */}
+            {/* Top Left - Clock */}
             <div className="flex items-center justify-center">
                 <Clock />
             </div>
 
-            {/* Top Right */}
+            {/* Top Right - Today's Tasks */}
             <div className="flex items-center justify-center">
                 <TodayTasks 
                     schedules={schedules} 
@@ -480,9 +504,9 @@ const App: React.FC = () => {
                 />
             </div>
 
-            {/* Bottom */}
-            <div className="col-span-2 row-start-2 flex items-center justify-center p-4 sm:p-8">
-                 <div className={`w-full h-full max-w-7xl flex flex-col rounded-xl shadow-lg p-2 sm:p-4 overflow-hidden ${viewBgClass}`}>
+            {/* Bottom - WeekView */}
+            <div className="col-span-2 row-start-2 p-6 pt-0">
+                 <div className={`w-full h-full rounded-2xl shadow-lg p-4 flex flex-col overflow-hidden ${viewBgClass}`}>
                     <WeekView
                         schedules={schedules}
                         categories={categories}
@@ -493,21 +517,7 @@ const App: React.FC = () => {
                 </div>
             </div>
         </main>
-      
-        <footer className={`cursor-default p-4 ${footerBgClass}`} onClick={(e) => e.stopPropagation()}>
-            <Controls 
-                onAddTask={() => handleOpenModal(null)} 
-                onOpenSettings={() => setIsSettingsOpen(true)}
-                profiles={profiles}
-                activeProfile={activeProfile}
-                onAddProfile={handleAddProfile}
-                onDeleteProfile={handleDeleteProfile}
-                onSwitchProfile={handleSwitchProfile}
-                onExportProfile={handleExportProfile}
-                onImportProfile={handleImportProfile}
-                isDarkMode={isDarkMode}
-            />
-        </footer>
+      </div>
       
       {modalState.isOpen && (
         <ScheduleModal
@@ -541,6 +551,7 @@ const App: React.FC = () => {
         />
       )}
       {isImportModalOpen && (
+// Fix: Removed extraneous properties that are not defined in ImportProfileModalProps.
         <ImportProfileModal
             isOpen={isImportModalOpen}
             onClose={handleCloseImportModal}

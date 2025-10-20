@@ -27,7 +27,7 @@ const ScheduleItem: React.FC<ScheduleItemProps> = ({ task, categories, onEdit, o
   return (
     <div
       onClick={() => onEdit(task)}
-      className={`p-1 text-xs rounded-sm cursor-pointer relative group transition-colors ${hoverClass}`}
+      className={`px-2 py-1 text-xs rounded-sm cursor-pointer relative group transition-colors ${hoverClass}`}
       style={categoryBorderStyle}
       title={`Sửa: ${task.text}`}
     >

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { translations, DEFAULT_PROFILE_NAME } from '../constants';
 
@@ -39,17 +40,18 @@ const ProfileManager: React.FC<ProfileManagerProps> = ({ profiles, activeProfile
     <div className="relative" ref={wrapperRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-2 p-2 rounded-lg ${isDarkMode ? 'hover:bg-white/10' : 'hover:bg-black/10'} transition-colors duration-300`}
+        className={`flex items-center gap-2 p-3 rounded-full ${isDarkMode ? 'hover:bg-white/20' : 'hover:bg-black/20'} transition-colors duration-300`}
         aria-haspopup="true"
         aria-expanded={isOpen}
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
           <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
         </svg>
+        <span className="font-semibold">{activeProfile}</span>
       </button>
 
       {isOpen && (
-        <div className={`absolute bottom-full left-0 mb-2 w-64 ${isDarkMode ? 'bg-black text-white' : 'bg-white text-black'} rounded-lg shadow-xl border ${isDarkMode ? 'border-white' : 'border-black'} z-10 p-4`}>
+        <div className={`absolute top-full left-0 mt-2 w-64 ${isDarkMode ? 'bg-black text-white' : 'bg-white text-black'} rounded-lg shadow-xl border ${isDarkMode ? 'border-white' : 'border-black'} z-10 p-4`}>
           <h3 className="font-bold text-lg mb-3">{translations.profiles.manage}</h3>
           
           <div className="space-y-2 mb-4 max-h-40 overflow-y-auto">

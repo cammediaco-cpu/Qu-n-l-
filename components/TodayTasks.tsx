@@ -15,7 +15,9 @@ const TodayTasks: React.FC<TodayTasksProps> = ({ schedules, categories, onToggle
     .filter(s => s.day === todayIndex && !s.isCompleted)
     .sort((a, b) => a.time.localeCompare(b.time));
 
-  if (schedules.filter(s => s.day === todayIndex).length === 0) {
+  const hasTasksToday = schedules.some(s => s.day === todayIndex);
+
+  if (!hasTasksToday) {
     return null; // Don't show anything if there are no tasks for today
   }
   
@@ -24,17 +26,17 @@ const TodayTasks: React.FC<TodayTasksProps> = ({ schedules, categories, onToggle
     : "accent-black";
   
   const sectionClass = isDarkMode 
-    ? 'bg-black/30 backdrop-blur-md border border-white/20' 
-    : 'bg-white/50 backdrop-blur-md border border-black/20';
+    ? 'bg-black/40 backdrop-blur-xl border border-white/20' 
+    : 'bg-white/50 backdrop-blur-xl border border-black/20';
 
   return (
-    <section className={`p-4 rounded-xl shadow-lg w-72 transition-colors duration-500 ${sectionClass}`}>
-      <h2 className="text-md font-semibold mb-2 opacity-80">
+    <section className={`p-4 rounded-2xl shadow-lg transition-colors duration-500 ${sectionClass}`}>
+      <h2 className="text-sm font-semibold mb-3 opacity-80">
         {translations.todayTasksTitle}
       </h2>
       
       {todaySchedules.length > 0 ? (
-        <ul className="space-y-1">
+        <ul className="space-y-2">
           {todaySchedules.map(task => {
             const category = task.categoryId ? categories.find(c => c.id === task.categoryId) : null;
             const textColorStyle = category ? { color: category.color } : {};
@@ -42,14 +44,14 @@ const TodayTasks: React.FC<TodayTasksProps> = ({ schedules, categories, onToggle
             return (
               <li
                 key={task.id}
-                className="flex items-center gap-2 text-sm"
+                className="flex items-center gap-3 text-sm"
               >
                 <input
                   type="checkbox"
                   id={`task-${task.id}`}
                   checked={task.isCompleted}
                   onChange={() => onToggleComplete(task.id)}
-                  className={`h-4 w-4 rounded-sm cursor-pointer border bg-transparent ${checkboxClass} ${isDarkMode ? 'border-white/50' : 'border-black/50'}`}
+                  className={`h-4 w-4 rounded-sm cursor-pointer border bg-transparent flex-shrink-0 ${checkboxClass} ${isDarkMode ? 'border-white/50' : 'border-black/50'}`}
                   aria-labelledby={`task-label-${task.id}`}
                 />
                 <label

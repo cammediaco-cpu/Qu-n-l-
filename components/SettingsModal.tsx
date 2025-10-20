@@ -52,6 +52,62 @@ const deleteRingtoneFromDB = async (id: number): Promise<void> => {
 };
 // =======================================================
 
+// Helper component for 24h time selection
+interface TimeSelectProps {
+  id: string;
+  label: string;
+  value: string; // e.g., "08:30"
+  onChange: (newValue: string) => void;
+  themeClasses: { input: string; option: string; };
+}
+
+const TimeSelect: React.FC<TimeSelectProps> = ({ id, label, value, onChange, themeClasses }) => {
+  // Ensure value is a valid time string, otherwise default.
+  const [hour, minute] = (value && value.includes(':')) ? value.split(':') : ['00', '00'];
+
+  const handleHourChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newHour = String(e.target.value).padStart(2, '0');
+    onChange(`${newHour}:${minute}`);
+  };
+
+  const handleMinuteChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newMinute = String(e.target.value).padStart(2, '0');
+    onChange(`${hour}:${newMinute}`);
+  };
+
+  return (
+    <div>
+      <label className="block text-sm font-medium mb-1 opacity-70">{label}</label>
+      <div className="flex items-center gap-2">
+        <select
+          id={id + '-hour'}
+          aria-label={`${label} - Giờ`}
+          value={parseInt(hour, 10).toString()}
+          onChange={handleHourChange}
+          className={`w-full px-3 py-1.5 rounded-md border transition-colors ${themeClasses.input}`}
+        >
+          {Array.from({ length: 24 }, (_, i) => i).map(h => (
+            <option key={h} value={h} className={themeClasses.option}>{String(h).padStart(2, '0')}</option>
+          ))}
+        </select>
+        <span className="font-bold">:</span>
+        <select
+          id={id + '-minute'}
+          aria-label={`${label} - Phút`}
+          value={parseInt(minute, 10).toString()}
+          onChange={handleMinuteChange}
+          className={`w-full px-3 py-1.5 rounded-md border transition-colors ${themeClasses.input}`}
+        >
+          {Array.from({ length: 60 }, (_, i) => i).map(m => (
+            <option key={m} value={m} className={themeClasses.option}>{String(m).padStart(2, '0')}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+};
+
+
 interface RingtoneOption {
   id?: number;
   name: string;
@@ -313,22 +369,34 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose
                      <div className="mt-4">
                         <h4 className="font-medium mb-2 opacity-80">{translations.settings.workHoursTitle}</h4>
                         <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label htmlFor="workStartTime" className="block text-sm font-medium mb-1 opacity-70">{translations.settings.workStartTime}</label>
-                                <input id="workStartTime" type="time" value={localSettings.workStartTime} onChange={(e) => handleChange('workStartTime', e.target.value)} className={`w-full px-3 py-1.5 rounded-md border transition-colors ${themeClasses.input}`} />
-                            </div>
-                            <div>
-                                <label htmlFor="lunchStartTime" className="block text-sm font-medium mb-1 opacity-70">{translations.settings.lunchStartTime}</label>
-                                <input id="lunchStartTime" type="time" value={localSettings.lunchStartTime} onChange={(e) => handleChange('lunchStartTime', e.target.value)} className={`w-full px-3 py-1.5 rounded-md border transition-colors ${themeClasses.input}`} />
-                            </div>
-                            <div>
-                                <label htmlFor="lunchEndTime" className="block text-sm font-medium mb-1 opacity-70">{translations.settings.lunchEndTime}</label>
-                                <input id="lunchEndTime" type="time" value={localSettings.lunchEndTime} onChange={(e) => handleChange('lunchEndTime', e.target.value)} className={`w-full px-3 py-1.5 rounded-md border transition-colors ${themeClasses.input}`} />
-                            </div>
-                            <div>
-                                <label htmlFor="workEndTime" className="block text-sm font-medium mb-1 opacity-70">{translations.settings.workEndTime}</label>
-                                <input id="workEndTime" type="time" value={localSettings.workEndTime} onChange={(e) => handleChange('workEndTime', e.target.value)} className={`w-full px-3 py-1.5 rounded-md border transition-colors ${themeClasses.input}`} />
-                            </div>
+                            <TimeSelect 
+                                id="workStartTime"
+                                label={translations.settings.workStartTime}
+                                value={localSettings.workStartTime}
+                                onChange={(value) => handleChange('workStartTime', value)}
+                                themeClasses={themeClasses}
+                            />
+                            <TimeSelect 
+                                id="lunchStartTime"
+                                label={translations.settings.lunchStartTime}
+                                value={localSettings.lunchStartTime}
+                                onChange={(value) => handleChange('lunchStartTime', value)}
+                                themeClasses={themeClasses}
+                            />
+                            <TimeSelect 
+                                id="lunchEndTime"
+                                label={translations.settings.lunchEndTime}
+                                value={localSettings.lunchEndTime}
+                                onChange={(value) => handleChange('lunchEndTime', value)}
+                                themeClasses={themeClasses}
+                            />
+                            <TimeSelect 
+                                id="workEndTime"
+                                label={translations.settings.workEndTime}
+                                value={localSettings.workEndTime}
+                                onChange={(value) => handleChange('workEndTime', value)}
+                                themeClasses={themeClasses}
+                            />
                         </div>
                     </div>
                 </div>
