@@ -10,6 +10,8 @@ interface ControlsProps {
   onAddProfile: (name: string) => void;
   onDeleteProfile: (name: string) => void;
   onSwitchProfile: (name: string) => void;
+  onExportProfile: () => void;
+  onImportProfile: (event: React.ChangeEvent<HTMLInputElement>) => void;
   isDarkMode: boolean;
 }
 

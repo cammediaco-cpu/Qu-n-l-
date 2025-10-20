@@ -1,15 +1,16 @@
 import React from 'react';
-import { Schedule } from '../types';
+import { Schedule, Category } from '../types';
 import ScheduleItem from './TaskItem';
 
 interface WeekViewProps {
   schedules: Schedule[];
+  categories: Category[];
   onEdit: (schedule: Schedule) => void;
   onDelete: (id: string) => void;
   isDarkMode: boolean;
 }
 
-const WeekView: React.FC<WeekViewProps> = ({ schedules, onEdit, onDelete, isDarkMode }) => {
+const WeekView: React.FC<WeekViewProps> = ({ schedules, categories, onEdit, onDelete, isDarkMode }) => {
   const dayHeaders = ['THỨ HAI', 'THỨ BA', 'THỨ TƯ', 'THỨ NĂM', 'THỨ SÁU', 'THỨ BẢY', 'CHỦ NHẬT'];
   
   const borderClass = isDarkMode ? 'border-white/30' : 'border-black/30';
@@ -20,6 +21,7 @@ const WeekView: React.FC<WeekViewProps> = ({ schedules, onEdit, onDelete, isDark
       <ScheduleItem
         key={schedule.id}
         task={schedule}
+        categories={categories}
         onEdit={onEdit}
         onDelete={onDelete}
         isDarkMode={isDarkMode}

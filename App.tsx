@@ -6,17 +6,63 @@ import WeekView from './components/TaskList';
 import ScheduleModal from './components/TaskInput';
 import SettingsModal from './components/SettingsModal';
 import NotificationPopup from './components/NotificationPopup';
-import { Schedule, ModalState, AppSettings } from './types';
+import { Schedule, ModalState, AppSettings, Category } from './types';
 import useLocalStorage from './hooks/useLocalStorage';
 import {
   LOCAL_STORAGE_SCHEDULES_BASE_KEY,
   LOCAL_STORAGE_SETTINGS_BASE_KEY,
   LOCAL_STORAGE_PROFILES_KEY,
   LOCAL_STORAGE_ACTIVE_PROFILE_KEY,
+  LOCAL_STORAGE_CATEGORIES_BASE_KEY,
   DEFAULT_SETTINGS,
   DEFAULT_PROFILE_NAME,
+  DEFAULT_CATEGORIES,
+  DEFAULT_RINGTONES,
   translations,
 } from './constants';
+
+// ========= IndexedDB Utilities for Ringtones =========
+const DB_NAME = 'WeeklyScheduleRingtoneDB';
+const DB_VERSION = 1;
+const STORE_NAME = 'ringtones';
+
+interface RingtoneRecord {
+  id?: number;
+  name: string;
+  file: File;
+}
+interface RingtoneOption {
+  name: string;
+  url: string;
+}
+
+const initDB = (): Promise<IDBDatabase> => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+      }
+    };
+  });
+};
+
+const getRingtonesFromDB = async (): Promise<RingtoneRecord[]> => {
+    const db = await initDB();
+    const transaction = db.transaction(STORE_NAME, 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
+    return new Promise((resolve, reject) => {
+        const request = store.getAll();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+        transaction.oncomplete = () => db.close();
+    });
+};
+// =======================================================
+
 
 interface NotificationPopupData {
   id: string;
@@ -30,17 +76,58 @@ const App: React.FC = () => {
 
   const schedulesKey = useMemo(() => `${LOCAL_STORAGE_SCHEDULES_BASE_KEY}-${activeProfile}`, [activeProfile]);
   const settingsKey = useMemo(() => `${LOCAL_STORAGE_SETTINGS_BASE_KEY}-${activeProfile}`, [activeProfile]);
+  const categoriesKey = useMemo(() => `${LOCAL_STORAGE_CATEGORIES_BASE_KEY}-${activeProfile}`, [activeProfile]);
+
 
   const [schedules, setSchedules] = useLocalStorage<Schedule[]>(schedulesKey, []);
   const [settings, setSettings] = useLocalStorage<AppSettings>(settingsKey, DEFAULT_SETTINGS);
+  const [categories, setCategories] = useLocalStorage<Category[]>(categoriesKey, DEFAULT_CATEGORIES);
 
   const [modalState, setModalState] = useState<ModalState>({ isOpen: false, schedule: null });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [firedNotifications, setFiredNotifications] = useState<Set<string>>(new Set());
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [activePopup, setActivePopup] = useState<NotificationPopupData | null>(null);
+  const [allRingtones, setAllRingtones] = useState<RingtoneOption[]>([...DEFAULT_RINGTONES]);
   
   const appRef = useRef<HTMLDivElement>(null);
+
+  const loadRingtones = useCallback(async () => {
+    // Revoke old blob URLs before creating new ones to prevent memory leaks
+    setAllRingtones(prevRingtones => {
+        prevRingtones.forEach(r => {
+            if (r.url.startsWith('blob:')) {
+                URL.revokeObjectURL(r.url);
+            }
+        });
+        return [...DEFAULT_RINGTONES]; // Reset to default before adding custom
+    });
+
+    try {
+      const customRingtonesFromDB = await getRingtonesFromDB();
+      const customRingtoneOptions = customRingtonesFromDB.map(r => ({
+        name: r.name,
+        url: URL.createObjectURL(r.file),
+      }));
+      setAllRingtones(prev => [...prev, ...customRingtoneOptions]);
+    } catch (error) {
+      console.error("Failed to load custom ringtones:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadRingtones();
+
+    return () => {
+      // Final cleanup of blob URLs when the main app unmounts
+      allRingtones.forEach(r => {
+        if (r.url.startsWith('blob:')) {
+          URL.revokeObjectURL(r.url);
+        }
+      });
+    };
+  }, [loadRingtones]);
+
 
   useEffect(() => {
     if (!profiles.includes(activeProfile)) {
@@ -58,12 +145,23 @@ const App: React.FC = () => {
 
   const triggerUnifiedNotification = useCallback((speechJobs: { text: string }[]) => {
     if (speechJobs.length === 0) return;
+    
+    // Find the ringtone URL from the identifier (name) stored in settings
+    const ringtoneIdentifier = settings.ringtoneUrl;
+    let ringtone = allRingtones.find(r => r.name === ringtoneIdentifier);
+    
+    // Fallback for old data where a URL might have been stored
+    if (!ringtone) {
+        ringtone = allRingtones.find(r => r.url === ringtoneIdentifier);
+    }
+    
+    const urlToPlay = ringtone ? ringtone.url : DEFAULT_RINGTONES[0].url; // Final fallback
 
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
 
-    const audio = new Audio(settings.ringtoneUrl);
+    const audio = new Audio(urlToPlay);
     audio.volume = settings.volume;
     audio.play().catch(e => console.error("Error playing sound:", e));
     
@@ -88,7 +186,7 @@ const App: React.FC = () => {
         });
       }
     }, (settings.ringtoneDuration * 1000) + 500);
-  }, [settings]);
+  }, [settings, allRingtones]);
 
   useEffect(() => {
     const checkNotifications = () => {
@@ -140,7 +238,7 @@ const App: React.FC = () => {
         const workdayNotifications: { [key: string]: string } = {
           '08:30': `Chào buổi sáng ${userName}. Đã đến giờ làm việc rồi, bắt đầu một ngày thật năng suất nhé!`,
           '12:00': `${userName} ơi, đã đến giờ nghỉ trưa. Tạm gác công việc lại và đi ăn thôi! Đừng quên chăm sóc sức khoẻ nhé.`,
-          '13:00': `Đến giờ làm việc buổi chiều rồi ${userName}. Cùng tiếp tục nào!`,
+          '13:30': `Đến giờ làm việc buổi chiều rồi ${userName}. Cùng tiếp tục nào!`,
           '17:00': `Đã hết giờ làm việc. Chúc ${userName} có một buổi tối vui vẻ!`,
         };
         
@@ -185,10 +283,10 @@ const App: React.FC = () => {
     setModalState({ isOpen: false, schedule: null });
   }, []);
 
-  const handleSaveSchedule = useCallback((data: { time: string; text: string; }, selectedDays: number[]) => {
+  const handleSaveSchedule = useCallback((data: { time: string; text: string; categoryId?: string }, selectedDays: number[]) => {
     if (modalState.schedule) {
       setSchedules(schedules.map(s =>
-        s.id === modalState.schedule!.id ? { ...s, time: data.time, text: data.text, isCompleted: false } : s
+        s.id === modalState.schedule!.id ? { ...s, time: data.time, text: data.text, categoryId: data.categoryId, isCompleted: false } : s
       ));
     } else {
       const newSchedules: Schedule[] = selectedDays.map(day => ({
@@ -196,6 +294,7 @@ const App: React.FC = () => {
         day,
         time: data.time,
         text: data.text,
+        categoryId: data.categoryId,
         isCompleted: false,
       }));
       setSchedules([...schedules, ...newSchedules]);
@@ -235,6 +334,7 @@ const App: React.FC = () => {
     if (window.confirm(translations.profiles.confirmDelete)) {
       window.localStorage.removeItem(`${LOCAL_STORAGE_SCHEDULES_BASE_KEY}-${profileName}`);
       window.localStorage.removeItem(`${LOCAL_STORAGE_SETTINGS_BASE_KEY}-${profileName}`);
+      window.localStorage.removeItem(`${LOCAL_STORAGE_CATEGORIES_BASE_KEY}-${profileName}`);
 
       const newProfiles = profiles.filter(p => p !== profileName);
       setProfiles(newProfiles);
@@ -250,6 +350,60 @@ const App: React.FC = () => {
       setActiveProfile(profileName);
     }
   }, [profiles, setActiveProfile]);
+
+  const handleExportProfile = useCallback(() => {
+    const dataToExport = {
+        schedules,
+        settings,
+        categories,
+    };
+    const dataStr = JSON.stringify(dataToExport, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `profile-${activeProfile}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [schedules, settings, categories, activeProfile]);
+
+  const handleImportProfile = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!window.confirm(translations.profiles.confirmImport)) {
+        event.target.value = ''; // Reset file input
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const text = e.target?.result;
+            if (typeof text !== 'string') throw new Error("File content is not readable");
+            
+            const parsedData = JSON.parse(text);
+
+            // Basic validation
+            if (Array.isArray(parsedData.schedules) && typeof parsedData.settings === 'object' && Array.isArray(parsedData.categories)) {
+                setSchedules(parsedData.schedules);
+                setSettings(parsedData.settings);
+                setCategories(parsedData.categories);
+                alert(translations.profiles.importSuccess);
+            } else {
+                throw new Error("Invalid profile file structure");
+            }
+        } catch (error) {
+            console.error("Failed to import profile:", error);
+            alert(translations.profiles.importError);
+        } finally {
+            event.target.value = ''; // Reset file input regardless of success/fail
+        }
+    };
+    reader.readAsText(file);
+  }, [setSchedules, setSettings, setCategories]);
 
   const themeClass = isDarkMode ? 'bg-black text-white' : 'bg-white text-black';
 
@@ -272,6 +426,7 @@ const App: React.FC = () => {
             <div className="flex items-center justify-center">
                 <TodayTasks 
                     schedules={schedules} 
+                    categories={categories}
                     onToggleComplete={handleToggleComplete} 
                     isDarkMode={isDarkMode}
                 />
@@ -282,6 +437,7 @@ const App: React.FC = () => {
                  <div className="w-full h-full max-w-7xl flex flex-col">
                     <WeekView
                         schedules={schedules}
+                        categories={categories}
                         onEdit={handleOpenModal}
                         onDelete={handleDeleteSchedule}
                         isDarkMode={isDarkMode}
@@ -299,6 +455,8 @@ const App: React.FC = () => {
                 onAddProfile={handleAddProfile}
                 onDeleteProfile={handleDeleteProfile}
                 onSwitchProfile={handleSwitchProfile}
+                onExportProfile={handleExportProfile}
+                onImportProfile={handleImportProfile}
                 isDarkMode={isDarkMode}
             />
         </footer>
@@ -308,6 +466,8 @@ const App: React.FC = () => {
           schedule={modalState.schedule}
           onSave={handleSaveSchedule}
           onClose={handleCloseModal}
+          categories={categories}
+          setCategories={setCategories}
           isDarkMode={isDarkMode}
         />
       )}
@@ -317,6 +477,8 @@ const App: React.FC = () => {
           onSave={handleSaveSettings}
           onClose={() => setIsSettingsOpen(false)}
           isDarkMode={isDarkMode}
+          allRingtones={allRingtones}
+          onRingtoneUpdate={loadRingtones}
         />
       )}
       {activePopup && (

@@ -1,14 +1,15 @@
 import React from 'react';
-import { Schedule } from '../types';
+import { Schedule, Category } from '../types';
 import { translations } from '../constants';
 
 interface TodayTasksProps {
   schedules: Schedule[];
+  categories: Category[];
   onToggleComplete: (id: string) => void;
   isDarkMode: boolean;
 }
 
-const TodayTasks: React.FC<TodayTasksProps> = ({ schedules, onToggleComplete, isDarkMode }) => {
+const TodayTasks: React.FC<TodayTasksProps> = ({ schedules, categories, onToggleComplete, isDarkMode }) => {
   const todayIndex = new Date().getDay();
   const todaySchedules = schedules
     .filter(s => s.day === todayIndex && !s.isCompleted)
@@ -32,29 +33,39 @@ const TodayTasks: React.FC<TodayTasksProps> = ({ schedules, onToggleComplete, is
       
       {todaySchedules.length > 0 ? (
         <ul className="space-y-1">
-          {todaySchedules.map(task => (
-            <li
-              key={task.id}
-              className="flex items-center gap-2 text-sm"
-            >
-              <input
-                type="checkbox"
-                id={`task-${task.id}`}
-                checked={task.isCompleted}
-                onChange={() => onToggleComplete(task.id)}
-                className={`h-4 w-4 rounded-sm cursor-pointer border bg-transparent ${checkboxClass} ${isDarkMode ? 'border-white/50' : 'border-black/50'}`}
-                aria-labelledby={`task-label-${task.id}`}
-              />
-              <label
-                htmlFor={`task-${task.id}`}
-                id={`task-label-${task.id}`}
-                className="flex-grow cursor-pointer"
+          {todaySchedules.map(task => {
+            const category = task.categoryId ? categories.find(c => c.id === task.categoryId) : null;
+            const textColorStyle = category ? { color: category.color } : {};
+
+            return (
+              <li
+                key={task.id}
+                className="flex items-center gap-2 text-sm"
               >
-                <span className="font-semibold mr-2 opacity-90">{task.time}</span>
-                <span className="opacity-80">{task.text}</span>
-              </label>
-            </li>
-          ))}
+                <input
+                  type="checkbox"
+                  id={`task-${task.id}`}
+                  checked={task.isCompleted}
+                  onChange={() => onToggleComplete(task.id)}
+                  className={`h-4 w-4 rounded-sm cursor-pointer border bg-transparent ${checkboxClass} ${isDarkMode ? 'border-white/50' : 'border-black/50'}`}
+                  aria-labelledby={`task-label-${task.id}`}
+                />
+                <label
+                  htmlFor={`task-${task.id}`}
+                  id={`task-label-${task.id}`}
+                  className="flex-grow cursor-pointer"
+                >
+                  <span className="font-semibold mr-2 opacity-90">{task.time}</span>
+                  <span
+                    className={category ? 'font-medium' : 'opacity-80'}
+                    style={textColorStyle}
+                  >
+                    {task.text}
+                  </span>
+                </label>
+              </li>
+            );
+          })}
         </ul>
       ) : (
          <p className="text-sm text-center opacity-80 mt-2">

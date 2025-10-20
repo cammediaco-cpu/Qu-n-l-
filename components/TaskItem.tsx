@@ -1,18 +1,24 @@
 import React from 'react';
-import { Schedule } from '../types';
+import { Schedule, Category } from '../types';
 import { translations } from '../constants';
 
 interface ScheduleItemProps {
   task: Schedule;
+  categories: Category[];
   onEdit: (schedule: Schedule) => void;
   onDelete: (id: string) => void;
   isDarkMode: boolean;
 }
 
-const ScheduleItem: React.FC<ScheduleItemProps> = ({ task, onEdit, onDelete, isDarkMode }) => {
+const ScheduleItem: React.FC<ScheduleItemProps> = ({ task, categories, onEdit, onDelete, isDarkMode }) => {
   const hoverClass = isDarkMode ? 'hover:bg-white/10' : 'hover:bg-black/10';
   const deleteColor = isDarkMode ? 'text-white/70 hover:text-white' : 'text-black/70 hover:text-black';
   
+  const category = task.categoryId ? categories.find(c => c.id === task.categoryId) : null;
+  const categoryBorderStyle = category ? { borderLeft: `3px solid ${category.color}` } : {};
+  const textCategoryStyle = category ? { color: category.color } : {};
+  const categoryPadding = category ? 'pl-2' : 'pl-1';
+
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent onEdit from firing
     onDelete(task.id);
@@ -22,11 +28,17 @@ const ScheduleItem: React.FC<ScheduleItemProps> = ({ task, onEdit, onDelete, isD
     <div
       onClick={() => onEdit(task)}
       className={`p-1 text-xs rounded-sm cursor-pointer relative group transition-colors ${hoverClass}`}
+      style={categoryBorderStyle}
       title={`Sửa: ${task.text}`}
     >
-      <div className="pr-4">
+      <div className={`pr-4 ${categoryPadding}`}>
         <span className="font-semibold">{task.time}</span>
-        <span className="ml-1 opacity-80 break-words">{task.text}</span>
+        <span
+          className={`ml-1 break-words ${category ? 'font-medium' : 'opacity-80'}`}
+          style={textCategoryStyle}
+        >
+          {task.text}
+        </span>
       </div>
       <button
         onClick={handleDelete}

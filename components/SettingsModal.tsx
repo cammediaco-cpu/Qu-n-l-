@@ -39,18 +39,6 @@ const addRingtoneToDB = async (ringtone: RingtoneRecord): Promise<void> => {
   });
 };
 
-const getRingtonesFromDB = async (): Promise<RingtoneRecord[]> => {
-    const db = await initDB();
-    const transaction = db.transaction(STORE_NAME, 'readonly');
-    const store = transaction.objectStore(STORE_NAME);
-    return new Promise((resolve, reject) => {
-        const request = store.getAll();
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-        transaction.oncomplete = () => db.close();
-    });
-};
-
 const deleteRingtoneFromDB = async (id: number): Promise<void> => {
     const db = await initDB();
     const transaction = db.transaction(STORE_NAME, 'readwrite');
@@ -75,33 +63,19 @@ interface SettingsModalProps {
   onSave: (settings: AppSettings) => void;
   onClose: () => void;
   isDarkMode: boolean;
+  allRingtones: RingtoneOption[];
+  onRingtoneUpdate: () => Promise<void>;
 }
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose, isDarkMode }) => {
+const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose, isDarkMode, allRingtones, onRingtoneUpdate }) => {
   const [localSettings, setLocalSettings] = useState<AppSettings>(settings);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [allRingtones, setAllRingtones] = useState<RingtoneOption[]>([...DEFAULT_RINGTONES]);
   const [selectedRingtone, setSelectedRingtone] = useState<RingtoneOption | undefined>(undefined);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const previewTimeoutRef = useRef<number | null>(null);
-
-  const loadCustomRingtones = async () => {
-    try {
-      const customRingtonesFromDB = await getRingtonesFromDB();
-      const customRingtoneOptions = customRingtonesFromDB.map(r => ({
-        id: r.id!,
-        name: r.name,
-        url: URL.createObjectURL(r.file),
-      }));
-      setAllRingtones([...DEFAULT_RINGTONES, ...customRingtoneOptions]);
-    } catch (error) {
-      console.error("Failed to load custom ringtones:", error);
-      setAllRingtones([...DEFAULT_RINGTONES]);
-    }
-  };
-
+  
   useEffect(() => {
     const loadVoices = () => {
       const allVoices = window.speechSynthesis.getVoices();
@@ -112,21 +86,32 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose
     if (window.speechSynthesis.onvoiceschanged !== undefined) {
       window.speechSynthesis.onvoiceschanged = loadVoices;
     }
-
-    loadCustomRingtones();
-
-    return () => {
-      allRingtones.forEach(r => {
-        if (r.url.startsWith('blob:')) {
-          URL.revokeObjectURL(r.url);
-        }
-      });
-    };
   }, []);
 
   useEffect(() => {
-    const current = allRingtones.find(r => r.url === localSettings.ringtoneUrl);
-    setSelectedRingtone(current);
+    // This effect syncs the selected ringtone and handles data migration from URL to Name.
+    const currentIdentifier = localSettings.ringtoneUrl;
+    let ringtone = allRingtones.find(r => r.name === currentIdentifier);
+
+    // If not found by name, try by URL (for migration of old data)
+    if (!ringtone && (currentIdentifier?.startsWith('http') || currentIdentifier?.startsWith('blob'))) {
+        ringtone = allRingtones.find(r => r.url === currentIdentifier);
+    }
+
+    if (ringtone) {
+        setSelectedRingtone(ringtone);
+        // If the identifier was a URL, update local state to use the name for persistence
+        if (localSettings.ringtoneUrl !== ringtone.name) {
+            handleChange('ringtoneUrl', ringtone.name);
+        }
+    } else {
+        // Fallback to default if nothing matches (e.g., stale data)
+        const defaultRingtone = allRingtones.find(r => r.name === DEFAULT_RINGTONES[0].name) || allRingtones[0];
+        if (defaultRingtone && localSettings.ringtoneUrl !== defaultRingtone.name) {
+           setSelectedRingtone(defaultRingtone);
+           handleChange('ringtoneUrl', defaultRingtone.name);
+        }
+    }
   }, [localSettings.ringtoneUrl, allRingtones]);
 
 
@@ -140,13 +125,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose
       try {
         await addRingtoneToDB({ name: file.name, file });
         alert(`Nhạc chuông "${file.name}" đã được thêm.`);
-        await loadCustomRingtones();
+        await onRingtoneUpdate(); // Reload ringtones in App and get new props
+        handleChange('ringtoneUrl', file.name); // Select the newly uploaded ringtone
       } catch (error) {
         console.error("Error adding ringtone:", error);
         alert("Không thể thêm nhạc chuông.");
       }
     } else {
       alert('Vui lòng chọn một file âm thanh.');
+    }
+     if (fileInputRef.current) {
+        fileInputRef.current.value = ""; // Reset file input
     }
   };
 
@@ -155,8 +144,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose
           if (window.confirm(`Bạn có chắc muốn xóa nhạc chuông "${selectedRingtone.name}" không?`)) {
               try {
                   await deleteRingtoneFromDB(selectedRingtone.id);
-                  handleChange('ringtoneUrl', DEFAULT_RINGTONES[0].url);
-                  await loadCustomRingtones();
+                  handleChange('ringtoneUrl', DEFAULT_RINGTONES[0].name); // Revert to default
+                  await onRingtoneUpdate();
               } catch (error) {
                   console.error("Error deleting ringtone:", error);
                   alert("Không thể xóa nhạc chuông.");
@@ -175,7 +164,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose
     }
     window.speechSynthesis.cancel();
 
-    const audio = new Audio(localSettings.ringtoneUrl);
+    const ringtoneToPlay = allRingtones.find(r => r.name === localSettings.ringtoneUrl);
+    if (!ringtoneToPlay) {
+        console.error("Ringtone not found for preview:", localSettings.ringtoneUrl);
+        return;
+    }
+
+    const audio = new Audio(ringtoneToPlay.url);
     audio.volume = localSettings.volume;
     audio.play().catch(e => console.error("Error playing preview sound:", e));
     audioRef.current = audio;
@@ -185,7 +180,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose
       audio.currentTime = 0;
     }, localSettings.ringtoneDuration * 1000);
     
-    previewTimeoutRef.current = setTimeout(() => {
+    previewTimeoutRef.current = window.setTimeout(() => {
       if ('speechSynthesis' in window && translations.settings.previewText) {
           const fullText = `${localSettings.notificationPrefix} ${translations.settings.previewText}`;
           const utterance = new SpeechSynthesisUtterance(fullText);
@@ -233,7 +228,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose
                 className={`w-full px-3 py-2 rounded-md border transition-colors ${themeClasses.input}`}
               >
                 {allRingtones.map(ringtone => (
-                  <option className={themeClasses.option} key={ringtone.url} value={ringtone.url}>{ringtone.name}</option>
+                  <option className={themeClasses.option} key={ringtone.name} value={ringtone.name}>{ringtone.name}</option>
                 ))}
               </select>
                {selectedRingtone?.id && (

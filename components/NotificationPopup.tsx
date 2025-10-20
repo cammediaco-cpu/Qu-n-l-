@@ -46,44 +46,51 @@ const NotificationPopup: React.FC<NotificationPopupProps> = ({ message, countdow
 
   return (
     <div
-      className={`fixed bottom-5 right-5 w-80 p-4 rounded-lg shadow-2xl z-50 animate-slide-in-up border ${themeClasses.bg} ${themeClasses.text} ${themeClasses.border}`}
-      role="alert"
-      aria-live="assertive"
+      className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
     >
-      <button
-        onClick={onClose}
-        className={`absolute top-2 right-2 p-1 rounded-full transition-colors ${themeClasses.closeButton}`}
-        aria-label="Close notification"
+      <div
+        className={`relative w-full max-w-xl p-8 rounded-lg shadow-2xl z-50 animate-fade-in border ${themeClasses.bg} ${themeClasses.text} ${themeClasses.border}`}
+        role="alert"
+        aria-live="assertive"
+        onClick={(e) => e.stopPropagation()}
       >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
+        <button
+          onClick={onClose}
+          className={`absolute top-2 right-2 p-1 rounded-full transition-colors ${themeClasses.closeButton}`}
+          aria-label="Close notification"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
 
-      {countdown && (
-        <div className="text-center mb-2">
-          <p className="text-5xl font-mono font-bold tracking-tighter">{countdown}</p>
-        </div>
-      )}
-      
-      <p className={`text-center ${countdown ? 'text-md' : 'text-lg'}`}>{message}</p>
-      
-      {/* Adding a simple CSS animation directly in the component for simplicity */}
-      <style>{`
-        @keyframes slide-in-up {
-          from {
-            transform: translateY(100%);
-            opacity: 0;
+        {countdown && (
+          <div className="text-center mb-4">
+            <p className="text-9xl font-mono font-bold tracking-tighter">{countdown}</p>
+          </div>
+        )}
+        
+        <p className={`text-center font-medium ${countdown ? 'text-2xl' : 'text-3xl'}`}>{message}</p>
+        
+        <style>{`
+          @keyframes fade-in {
+            from {
+              transform: scale(0.95);
+              opacity: 0;
+            }
+            to {
+              transform: scale(1);
+              opacity: 1;
+            }
           }
-          to {
-            transform: translateY(0);
-            opacity: 1;
+          .animate-fade-in {
+            animation: fade-in 0.3s ease-out forwards;
           }
-        }
-        .animate-slide-in-up {
-          animation: slide-in-up 0.3s ease-out forwards;
-        }
-      `}</style>
+        `}</style>
+      </div>
     </div>
   );
 };

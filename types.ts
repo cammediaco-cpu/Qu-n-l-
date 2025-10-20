@@ -1,9 +1,16 @@
-export interface Schedule {
+export interface Category {
   id: string;
+  name: string;
+  color: string;
+}
+
+export interface Schedule {
+  id:string;
   day: number; // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
   time: string;
   text: string;
   isCompleted: boolean;
+  categoryId?: string;
 }
 
 export type ModalState = {
