@@ -107,6 +107,13 @@ const App: React.FC = () => {
   
   const [bgIndex, setBgIndex] = useState(() => Math.floor(Math.random() * BACKGROUND_IMAGES.length));
   const appRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    // Request notification permission on component mount
+    if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+      Notification.requestPermission();
+    }
+  }, []);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -211,6 +218,13 @@ const App: React.FC = () => {
       }
     }, (settings.ringtoneDuration * 1000) + 500);
   }, [settings, allRingtones]);
+  
+  // Helper function to show system notifications
+  const showSystemNotification = (title: string, body: string) => {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(title, { body });
+      }
+  };
 
   useEffect(() => {
     const checkNotifications = () => {
@@ -238,6 +252,7 @@ const App: React.FC = () => {
           speechJobs.push({ text: message});
           notificationKeysToFire.push(mainNotificationKey);
           newPopupData = { id: mainNotificationKey, message };
+          showSystemNotification(translations.appTitle, message);
         }
 
         if (settings.preNotificationEnabled) {
@@ -253,6 +268,7 @@ const App: React.FC = () => {
              speechJobs.push({ text: message});
              notificationKeysToFire.push(preNotificationKey);
              newPopupData = { id: preNotificationKey, message, countdownTarget: scheduleDate };
+             showSystemNotification(translations.appTitle, message);
           }
         }
       });
@@ -274,6 +290,7 @@ const App: React.FC = () => {
                     speechJobs.push({ text: message });
                     notificationKeysToFire.push(key);
                     newPopupData = { id: key, message };
+                    showSystemNotification(translations.appTitle, message);
                 }
             }
         }

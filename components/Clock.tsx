@@ -38,7 +38,7 @@ const getWeatherDescription = (code: number): string => {
 
 const Clock: React.FC = () => {
   const [time, setTime] = useState(new Date());
-  const [weather, setWeather] = useState<string | null>('Đang tải thời tiết...');
+  const [weather, setWeather] = useState<string | null>('Đang tải vị trí...');
 
   useEffect(() => {
     const timerId = setInterval(() => {
@@ -50,6 +50,7 @@ const Clock: React.FC = () => {
   useEffect(() => {
     const fetchWeather = async (lat: number, lon: number) => {
       try {
+        setWeather('Đang tải thời tiết...');
         // Fetch city name from BigDataCloud API for better accuracy
         const geoResponse = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=vi`);
         const geoData = await geoResponse.json();
@@ -74,7 +75,7 @@ const Clock: React.FC = () => {
       }
     };
 
-    const fetchLocationAndWeather = async () => {
+    const fetchWeatherByIP = async () => {
         try {
             // Using a free IP geolocation service for more consistent results on devices without GPS
             const response = await fetch('https://ipapi.co/json/');
@@ -90,6 +91,24 @@ const Clock: React.FC = () => {
         } catch (error) {
             console.error("Error fetching location by IP:", error);
             setWeather("Không thể xác định vị trí.");
+        }
+    };
+    
+    const fetchLocationAndWeather = async () => {
+        if ('geolocation' in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    fetchWeather(position.coords.latitude, position.coords.longitude);
+                },
+                (error) => {
+                    console.warn(`Geolocation error (${error.code}): ${error.message}`);
+                    setWeather("Không thể lấy vị trí. Dùng IP...");
+                    fetchWeatherByIP(); // Fallback to IP geolocation
+                }
+            );
+        } else {
+            console.log("Geolocation is not supported by this browser.");
+            fetchWeatherByIP(); // Fallback to IP geolocation
         }
     };
     
