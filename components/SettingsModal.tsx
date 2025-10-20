@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AppSettings } from '../types';
-import { translations, DEFAULT_RINGTONES } from '../constants';
+import { translations, DEFAULT_RINGTONES, GEMINI_TTS_VOICES } from '../constants';
+import { GoogleGenAI, Modality } from '@google/genai';
 
 // ========= IndexedDB Utilities for Ringtones =========
 const DB_NAME = 'WeeklyScheduleRingtoneDB';
@@ -51,6 +52,37 @@ const deleteRingtoneFromDB = async (id: number): Promise<void> => {
     });
 };
 // =======================================================
+
+// ========= Audio Decoding Utilities =========
+function decode(base64: string): Uint8Array {
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
+async function decodeAudioData(
+  data: Uint8Array,
+  ctx: AudioContext,
+  sampleRate: number,
+  numChannels: number,
+): Promise<AudioBuffer> {
+  const dataInt16 = new Int16Array(data.buffer);
+  const frameCount = dataInt16.length / numChannels;
+  const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
+
+  for (let channel = 0; channel < numChannels; channel++) {
+    const channelData = buffer.getChannelData(channel);
+    for (let i = 0; i < frameCount; i++) {
+      channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
+    }
+  }
+  return buffer;
+}
+// ===========================================
 
 // Helper component for 24h time selection
 interface TimeSelectProps {
@@ -125,27 +157,15 @@ interface SettingsModalProps {
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose, isDarkMode, allRingtones, onRingtoneUpdate }) => {
   const [localSettings, setLocalSettings] = useState<AppSettings>(settings);
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedRingtone, setSelectedRingtone] = useState<RingtoneOption | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<'main' | 'advanced'>('main');
 
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const previewTimeoutRef = useRef<number | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
   
-  useEffect(() => {
-    const loadVoices = () => {
-      const allVoices = window.speechSynthesis.getVoices();
-      const vietnameseVoices = allVoices.filter(v => v.lang.startsWith('vi'));
-      setVoices(vietnameseVoices);
-    };
-    loadVoices();
-    if (window.speechSynthesis.onvoiceschanged !== undefined) {
-      window.speechSynthesis.onvoiceschanged = loadVoices;
-    }
-  }, []);
-
   useEffect(() => {
     // This effect syncs the selected ringtone and handles data migration from URL to Name.
     const currentIdentifier = localSettings.ringtoneUrl;
@@ -212,15 +232,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose
       }
   };
 
-  const handlePreview = () => {
+  const handlePreview = async () => {
     if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
     }
-    if (previewTimeoutRef.current) {
-      clearTimeout(previewTimeoutRef.current);
+    if (audioSourceRef.current) {
+        audioSourceRef.current.stop();
+        audioSourceRef.current = null;
     }
-    window.speechSynthesis.cancel();
+
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+    }
 
     const ringtoneToPlay = allRingtones.find(r => r.name === localSettings.ringtoneUrl);
     if (!ringtoneToPlay) {
@@ -238,19 +262,46 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose
       audio.currentTime = 0;
     }, localSettings.ringtoneDuration * 1000);
     
-    previewTimeoutRef.current = window.setTimeout(() => {
-      if ('speechSynthesis' in window && translations.settings.previewText) {
-          const fullText = `${localSettings.notificationPrefix} ${translations.settings.previewText}`;
-          const utterance = new SpeechSynthesisUtterance(fullText);
-          const selectedVoice = voices.find(v => v.voiceURI === localSettings.voiceURI);
-          if (selectedVoice) {
-              utterance.voice = selectedVoice;
-          }
-          utterance.lang = selectedVoice?.lang || 'vi-VN';
-          utterance.volume = localSettings.volume;
-          window.speechSynthesis.speak(utterance);
-      }
-    }, (localSettings.ringtoneDuration * 1000) + 500);
+    try {
+        const fullText = `${localSettings.notificationPrefix} ${translations.settings.previewText}`;
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash-preview-tts",
+            contents: [{ parts: [{ text: fullText }] }],
+            config: {
+                responseModalities: [Modality.AUDIO],
+                speechConfig: {
+                    voiceConfig: {
+                        prebuiltVoiceConfig: { voiceName: localSettings.geminiVoice },
+                    },
+                },
+            },
+        });
+        
+        const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        if (base64Audio) {
+            const audioBuffer = await decodeAudioData(
+                decode(base64Audio),
+                audioContextRef.current,
+                24000,
+                1,
+            );
+            
+            setTimeout(() => {
+                if (!audioContextRef.current) return;
+                const source = audioContextRef.current.createBufferSource();
+                source.buffer = audioBuffer;
+                const gainNode = audioContextRef.current.createGain();
+                gainNode.gain.value = localSettings.volume;
+                source.connect(gainNode);
+                gainNode.connect(audioContextRef.current.destination);
+                source.start();
+                audioSourceRef.current = source;
+            }, (localSettings.ringtoneDuration * 1000) + 500);
+        }
+    } catch (error) {
+        console.error("Error generating preview speech:", error);
+    }
   };
   
   const handleSave = () => {
@@ -346,9 +397,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose
 
                     <div>
                         <label htmlFor="voice" className="block font-medium mb-1 opacity-80">{translations.settings.voice}</label>
-                        <select id="voice" value={localSettings.voiceURI} onChange={(e) => handleChange('voiceURI', e.target.value)} className={`w-full px-3 py-2 rounded-md border transition-colors ${themeClasses.input}`}>
-                        <option className={themeClasses.option} value="default">{translations.settings.defaultVoice}</option>
-                        {voices.map(voice => ( <option className={themeClasses.option} key={voice.voiceURI} value={voice.voiceURI}>{voice.name} ({voice.lang})</option> ))}
+                        <select id="voice" value={localSettings.geminiVoice} onChange={(e) => handleChange('geminiVoice', e.target.value)} className={`w-full px-3 py-2 rounded-md border transition-colors ${themeClasses.input}`}>
+                        {GEMINI_TTS_VOICES.map(voice => ( <option className={themeClasses.option} key={voice.value} value={voice.value}>{voice.name}</option> ))}
                         </select>
                     </div>
 

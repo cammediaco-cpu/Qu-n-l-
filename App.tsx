@@ -11,6 +11,7 @@ import ImportProfileModal, { ImportOptions } from './components/ImportProfileMod
 import ProfileManager from './components/ProfileManager';
 import { Schedule, ModalState, AppSettings, Category, ProfileData } from './types';
 import useLocalStorage from './hooks/useLocalStorage';
+import { GoogleGenAI, Modality } from '@google/genai';
 import {
   LOCAL_STORAGE_SCHEDULES_BASE_KEY,
   LOCAL_STORAGE_SETTINGS_BASE_KEY,
@@ -75,6 +76,36 @@ const getRingtonesFromDB = async (): Promise<RingtoneRecord[]> => {
 };
 // =======================================================
 
+// ========= Audio Decoding Utilities =========
+function decode(base64: string): Uint8Array {
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
+async function decodeAudioData(
+  data: Uint8Array,
+  ctx: AudioContext,
+  sampleRate: number,
+  numChannels: number,
+): Promise<AudioBuffer> {
+  const dataInt16 = new Int16Array(data.buffer);
+  const frameCount = dataInt16.length / numChannels;
+  const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
+
+  for (let channel = 0; channel < numChannels; channel++) {
+    const channelData = buffer.getChannelData(channel);
+    for (let i = 0; i < frameCount; i++) {
+      channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
+    }
+  }
+  return buffer;
+}
+// ===========================================
 
 interface NotificationPopupData {
   id: string;
@@ -108,6 +139,13 @@ const App: React.FC = () => {
   const [bgIndex, setBgIndex] = useState(() => Math.floor(Math.random() * BACKGROUND_IMAGES.length));
   const appRef = useRef<HTMLDivElement>(null);
   
+  const audioContextRef = useRef<AudioContext | null>(null);
+  useEffect(() => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+    }
+  }, []);
+
   useEffect(() => {
     // Request notification permission on component mount
     if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
@@ -174,49 +212,67 @@ const App: React.FC = () => {
   };
 
 
-  const triggerUnifiedNotification = useCallback((speechJobs: { text: string }[]) => {
-    if (speechJobs.length === 0) return;
+  const triggerUnifiedNotification = useCallback(async (speechJobs: { text: string }[]) => {
+    if (!audioContextRef.current) return;
     
-    // Find the ringtone URL from the identifier (name) stored in settings
     const ringtoneIdentifier = settings.ringtoneUrl;
     let ringtone = allRingtones.find(r => r.name === ringtoneIdentifier);
-    
-    // Fallback for old data where a URL might have been stored
     if (!ringtone) {
         ringtone = allRingtones.find(r => r.url === ringtoneIdentifier);
     }
-    
-    const urlToPlay = ringtone ? ringtone.url : DEFAULT_RINGTONES[0].url; // Final fallback
+    const urlToPlay = ringtone ? ringtone.url : DEFAULT_RINGTONES[0].url;
 
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    }
-
-    const audio = new Audio(urlToPlay);
-    audio.volume = settings.volume;
-    audio.play().catch(e => console.error("Error playing sound:", e));
+    const ringtoneAudio = new Audio(urlToPlay);
+    ringtoneAudio.volume = settings.volume;
+    ringtoneAudio.play().catch(e => console.error("Error playing sound:", e));
     
     setTimeout(() => {
-        audio.pause();
-        audio.currentTime = 0;
+        ringtoneAudio.pause();
+        ringtoneAudio.currentTime = 0;
     }, settings.ringtoneDuration * 1000);
 
-    setTimeout(() => {
-      if ('speechSynthesis' in window) {
-        const allVoices = window.speechSynthesis.getVoices();
-        const selectedVoice = allVoices.find(v => v.voiceURI === settings.voiceURI);
+    const combinedText = speechJobs.map(job => job.text).join('. ');
+    if (combinedText.trim().length === 0) return;
+
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash-preview-tts",
+        contents: [{ parts: [{ text: combinedText }] }],
+        config: {
+            responseModalities: [Modality.AUDIO],
+            speechConfig: {
+                voiceConfig: {
+                  prebuiltVoiceConfig: { voiceName: settings.geminiVoice },
+                },
+            },
+        },
+      });
+      
+      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      if (base64Audio) {
+        const audioBuffer = await decodeAudioData(
+            decode(base64Audio),
+            audioContextRef.current,
+            24000,
+            1,
+        );
         
-        speechJobs.forEach(job => {
-          const utterance = new SpeechSynthesisUtterance(job.text);
-          utterance.lang = selectedVoice?.lang || 'vi-VN';
-          utterance.volume = settings.volume;
-          if (selectedVoice) {
-            utterance.voice = selectedVoice;
-          }
-          window.speechSynthesis.speak(utterance);
-        });
+        setTimeout(() => {
+            if (!audioContextRef.current) return;
+            const source = audioContextRef.current.createBufferSource();
+            source.buffer = audioBuffer;
+            const gainNode = audioContextRef.current.createGain();
+            gainNode.gain.value = settings.volume;
+            source.connect(gainNode);
+            gainNode.connect(audioContextRef.current.destination);
+            source.start();
+        }, (settings.ringtoneDuration * 1000) + 500);
       }
-    }, (settings.ringtoneDuration * 1000) + 500);
+    } catch (error) {
+        console.error("Error generating speech with Gemini:", error);
+    }
+
   }, [settings, allRingtones]);
   
   // Helper function to show system notifications

@@ -15,10 +15,18 @@ export const DEFAULT_RINGTONES = [
   { name: 'chuông 05', url: 'https://cdn.pixabay.com/audio/2025/09/25/audio_1c2207d92b.mp3' },
 ];
 
+export const GEMINI_TTS_VOICES = [
+  { name: 'Kore (Nữ)', value: 'Kore' },
+  { name: 'Puck (Nam)', value: 'Puck' },
+  { name: 'Charon (Nam)', value: 'Charon' },
+  { name: 'Fenrir (Nam)', value: 'Fenrir' },
+  { name: 'Zephyr (Nữ)', value: 'Zephyr' },
+];
+
 export const DEFAULT_SETTINGS = {
   ringtoneUrl: DEFAULT_RINGTONES[0].name,
   ringtoneDuration: 3, // seconds
-  voiceURI: 'default',
+  geminiVoice: GEMINI_TTS_VOICES[0].value,
   volume: 0.8, // 80%
   notificationPrefix: 'Đã đến giờ:',
   preNotificationEnabled: false,
@@ -95,7 +103,7 @@ export const translations = {
     uploadRingtone: 'Tải lên nhạc chuông',
     uploaded: 'Đã tải lên',
     duration: 'Thời lượng chuông (giây)',
-    voice: 'Giọng đọc',
+    voice: 'Giọng đọc Gemini',
     defaultVoice: 'Mặc định',
     volume: 'Âm lượng',
     notificationPrefixLabel: 'Văn bản lời nhắc chính',
