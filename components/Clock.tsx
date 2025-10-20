@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 
 // Helper to interpret WMO weather codes into Vietnamese
@@ -51,10 +50,10 @@ const Clock: React.FC = () => {
   useEffect(() => {
     const fetchWeather = async (lat: number, lon: number) => {
       try {
-        // Fetch city name first from Open-Meteo's geocoding API
-        const geoResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?latitude=${lat}&longitude=${lon}&count=1&language=vi&format=json`);
+        // Fetch city name from BigDataCloud API for better accuracy
+        const geoResponse = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=vi`);
         const geoData = await geoResponse.json();
-        const cityName = geoData?.results?.[0]?.name || '';
+        const locationName = geoData.locality || geoData.city || geoData.principalSubdivision || '';
 
         // Fetch weather data from Open-Meteo's forecast API
         const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`);
@@ -65,7 +64,7 @@ const Clock: React.FC = () => {
           const weatherCode = weatherData.current.weather_code;
           const description = getWeatherDescription(weatherCode);
           
-          setWeather(`${cityName ? cityName + ', ' : ''}${description} - ${temp}°C`);
+          setWeather(`${locationName ? locationName + ', ' : ''}${description} - ${temp}°C`);
         } else {
             setWeather("Không thể lấy dữ liệu thời tiết.");
         }
