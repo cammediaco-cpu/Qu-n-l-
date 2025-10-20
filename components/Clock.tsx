@@ -74,24 +74,28 @@ const Clock: React.FC = () => {
       }
     };
 
-    const getLocationAndFetchWeather = () => {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            fetchWeather(position.coords.latitude, position.coords.longitude);
-          },
-          () => {
-            setWeather("Không thể truy cập vị trí.");
-          }
-        );
-      } else {
-          setWeather("Trình duyệt không hỗ trợ định vị.");
-      }
+    const fetchLocationAndWeather = async () => {
+        try {
+            // Using a free IP geolocation service for more consistent results on devices without GPS
+            const response = await fetch('https://ipapi.co/json/');
+            if (!response.ok) {
+                throw new Error('IP-based geolocation request failed');
+            }
+            const data = await response.json();
+            if (data.latitude && data.longitude) {
+                fetchWeather(data.latitude, data.longitude);
+            } else {
+                 setWeather("Không thể xác định vị trí qua IP.");
+            }
+        } catch (error) {
+            console.error("Error fetching location by IP:", error);
+            setWeather("Không thể xác định vị trí.");
+        }
     };
     
-    getLocationAndFetchWeather();
+    fetchLocationAndWeather();
     // Fetch weather every 30 minutes
-    const weatherInterval = setInterval(getLocationAndFetchWeather, 30 * 60 * 1000);
+    const weatherInterval = setInterval(fetchLocationAndWeather, 30 * 60 * 1000);
     
     return () => clearInterval(weatherInterval);
   }, []);
