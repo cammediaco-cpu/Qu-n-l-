@@ -120,7 +120,7 @@ const Clock: React.FC = () => {
 
   return (
     <div className="text-left transition-colors duration-500 flex-shrink-0">
-      <h1 className="text-[10rem] leading-none font-bold tracking-tighter">
+      <h1 className="text-[10rem] leading-none font-bold tracking-tight">
         {formatTime(time).slice(0, 5)} 
         <span className="align-baseline text-8xl font-bold">{formatTime(time).slice(5)}</span>
       </h1>

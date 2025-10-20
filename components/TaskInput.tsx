@@ -135,9 +135,9 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ schedule, onSave, onClose
   const isEditing = schedule !== null;
 
   const themeClasses = {
-    bg: isDarkMode ? 'bg-black' : 'bg-white',
+    bg: isDarkMode ? 'bg-black/30 backdrop-blur-xl' : 'bg-white/50 backdrop-blur-xl',
     text: isDarkMode ? 'text-white' : 'text-black',
-    border: isDarkMode ? 'border-white' : 'border-black',
+    border: isDarkMode ? 'border-white/20' : 'border-black/20',
     inputBg: isDarkMode ? 'bg-transparent border-white/50 focus:border-white' : 'bg-transparent border-black/50 focus:border-black',
     option: isDarkMode ? 'bg-black text-white' : 'bg-white text-black',
     button: isDarkMode ? 'bg-white text-black hover:bg-white/80' : 'bg-black text-white hover:bg-black/80',
@@ -151,14 +151,14 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ schedule, onSave, onClose
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50"
+      className="fixed inset-0 bg-black/50 flex justify-center items-center z-50"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
     >
       <div 
-        className={`${themeClasses.bg} ${themeClasses.text} rounded-lg shadow-xl p-6 w-full max-w-lg relative border ${themeClasses.border}`}
+        className={`${themeClasses.bg} ${themeClasses.text} rounded-2xl shadow-xl p-6 w-full max-w-lg relative border ${themeClasses.border}`}
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="modal-title" className="text-2xl font-bold mb-4">

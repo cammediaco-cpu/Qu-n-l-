@@ -38,21 +38,21 @@ const NotificationPopup: React.FC<NotificationPopupProps> = ({ message, countdow
   }, [countdownTarget]);
 
   const themeClasses = {
-    bg: isDarkMode ? 'bg-black' : 'bg-white',
+    bg: isDarkMode ? 'bg-black/30 backdrop-blur-xl' : 'bg-white/50 backdrop-blur-xl',
     text: isDarkMode ? 'text-white' : 'text-black',
-    border: isDarkMode ? 'border-white' : 'border-black',
+    border: isDarkMode ? 'border-white/20' : 'border-black/20',
     closeButton: isDarkMode ? 'text-white/50 hover:text-white' : 'text-black/50 hover:text-black',
   };
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50"
+      className="fixed inset-0 bg-black/50 flex justify-center items-center z-50"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
     >
       <div
-        className={`relative w-full max-w-xl p-8 rounded-lg shadow-2xl z-50 animate-fade-in border ${themeClasses.bg} ${themeClasses.text} ${themeClasses.border}`}
+        className={`relative w-full max-w-xl p-8 rounded-2xl shadow-2xl z-50 animate-fade-in border ${themeClasses.bg} ${themeClasses.text} ${themeClasses.border}`}
         role="alert"
         aria-live="assertive"
         onClick={(e) => e.stopPropagation()}

@@ -32,9 +32,9 @@ const ImportProfileModal: React.FC<ImportProfileModalProps> = ({ isOpen, onClose
   if (!isOpen) return null;
   
   const themeClasses = {
-    bg: isDarkMode ? 'bg-black' : 'bg-white',
+    bg: isDarkMode ? 'bg-black/30 backdrop-blur-xl' : 'bg-white/50 backdrop-blur-xl',
     text: isDarkMode ? 'text-white' : 'text-black',
-    border: isDarkMode ? 'border-white' : 'border-black',
+    border: isDarkMode ? 'border-white/20' : 'border-black/20',
     button: isDarkMode ? 'bg-white text-black hover:bg-white/80' : 'bg-black text-white hover:bg-black/80',
     buttonSecondary: isDarkMode ? 'border border-white hover:bg-white/10' : 'border border-black hover:bg-black/10',
     accentColor: isDarkMode ? 'accent-white' : 'accent-black',
@@ -56,8 +56,8 @@ const ImportProfileModal: React.FC<ImportProfileModalProps> = ({ isOpen, onClose
   );
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50" onClick={onClose} role="dialog" aria-modal="true">
-      <div className={`${themeClasses.bg} ${themeClasses.text} rounded-lg shadow-xl p-6 w-full max-w-md relative border ${themeClasses.border}`} onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50" onClick={onClose} role="dialog" aria-modal="true">
+      <div className={`${themeClasses.bg} ${themeClasses.text} rounded-2xl shadow-xl p-6 w-full max-w-md relative border ${themeClasses.border}`} onClick={e => e.stopPropagation()}>
         <h2 className="text-xl font-bold mb-2">{translations.profiles.confirmImportTitle}</h2>
         <p className="text-sm opacity-80 mb-6">{translations.profiles.confirmImportMessage}</p>
 

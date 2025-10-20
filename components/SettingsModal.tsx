@@ -127,6 +127,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose
   const [localSettings, setLocalSettings] = useState<AppSettings>(settings);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedRingtone, setSelectedRingtone] = useState<RingtoneOption | undefined>(undefined);
+  const [activeTab, setActiveTab] = useState<'main' | 'advanced'>('main');
+
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -256,9 +258,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose
   };
   
   const themeClasses = {
-    bg: isDarkMode ? 'bg-black' : 'bg-white',
+    bg: isDarkMode ? 'bg-black/30 backdrop-blur-xl' : 'bg-white/50 backdrop-blur-xl',
     text: isDarkMode ? 'text-white' : 'text-black',
-    border: isDarkMode ? 'border-white' : 'border-black',
+    border: isDarkMode ? 'border-white/20' : 'border-black/20',
     input: isDarkMode ? 'bg-white/10 border-white/50 focus:border-white' : 'bg-black/10 border-black/50 focus:border-black',
     option: isDarkMode ? 'bg-black text-white' : 'bg-white text-black',
     button: isDarkMode ? 'bg-white text-black hover:bg-white/80' : 'bg-black text-white hover:bg-black/80',
@@ -268,143 +270,175 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50" onClick={onClose}>
-      <div className={`${themeClasses.bg} ${themeClasses.text} rounded-lg shadow-xl p-6 w-full max-w-md relative overflow-y-auto max-h-[90vh] border ${themeClasses.border}`} onClick={e => e.stopPropagation()}>
-        <h2 className="text-2xl font-bold mb-6">{translations.settings.title}</h2>
-        
-        <div className="space-y-4 text-sm">
-          {/* Main Notification Settings */}
-          <div>
-            <label htmlFor="ringtone" className="block font-medium mb-1 opacity-80">{translations.settings.ringtone}</label>
-            <div className="flex items-center gap-2">
-              <select
-                id="ringtone"
-                value={localSettings.ringtoneUrl}
-                onChange={(e) => handleChange('ringtoneUrl', e.target.value)}
-                className={`w-full px-3 py-2 rounded-md border transition-colors ${themeClasses.input}`}
-              >
-                {allRingtones.map(ringtone => (
-                  <option className={themeClasses.option} key={ringtone.name} value={ringtone.name}>{ringtone.name}</option>
-                ))}
-              </select>
-               {selectedRingtone?.id && (
-                <button
-                    type="button"
-                    onClick={handleDeleteRingtone}
-                    title={`Xóa nhạc chuông "${selectedRingtone.name}"`}
-                    className="p-2 rounded-full text-red-500 hover:bg-red-500/10 transition-colors flex-shrink-0"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                </button>
-            )}
-            </div>
-            <button type="button" onClick={() => fileInputRef.current?.click()} className="opacity-80 hover:underline mt-2 text-sm">
-                {translations.settings.uploadRingtone}
+    <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50" onClick={onClose}>
+      <div className={`${themeClasses.bg} ${themeClasses.text} rounded-2xl shadow-xl p-6 w-full max-w-md relative flex flex-col max-h-[90vh] border ${themeClasses.border}`} onClick={e => e.stopPropagation()}>
+        <h2 className="text-2xl font-bold mb-4 flex-shrink-0">{translations.settings.title}</h2>
+
+        {/* Tab Navigation */}
+        <div className={`flex-shrink-0 border-b mb-4 ${themeClasses.border}`}>
+            <button
+                onClick={() => setActiveTab('main')}
+                className={`py-2 px-4 text-sm font-medium transition-colors border-b-2 ${
+                    activeTab === 'main'
+                    ? (isDarkMode ? 'border-white text-white' : 'border-black text-black')
+                    : `border-transparent opacity-60 hover:opacity-100 ${isDarkMode ? 'text-white' : 'text-black'}`
+                }`}
+            >
+                {translations.settings.tabMain}
             </button>
-            <input type="file" accept="audio/*" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
-          </div>
-
-          <div>
-            <label htmlFor="duration" className="block font-medium mb-1 opacity-80">{translations.settings.duration}: {localSettings.ringtoneDuration}s</label>
-            <input id="duration" type="range" min="1" max="10" step="1" value={localSettings.ringtoneDuration} onChange={(e) => handleChange('ringtoneDuration', Number(e.target.value))} className={`w-full h-2 rounded-lg appearance-none cursor-pointer ${themeClasses.rangeTrack} ${themeClasses.accentColor}`} />
-          </div>
-
-          <div>
-            <label htmlFor="prefix" className="block font-medium mb-1 opacity-80">{translations.settings.notificationPrefixLabel}</label>
-            <input id="prefix" type="text" placeholder={translations.settings.notificationPrefixPlaceholder} value={localSettings.notificationPrefix} onChange={(e) => handleChange('notificationPrefix', e.target.value)} className={`w-full px-3 py-2 rounded-md border transition-colors ${themeClasses.input}`} />
-          </div>
-
-          <div>
-            <label htmlFor="voice" className="block font-medium mb-1 opacity-80">{translations.settings.voice}</label>
-            <select id="voice" value={localSettings.voiceURI} onChange={(e) => handleChange('voiceURI', e.target.value)} className={`w-full px-3 py-2 rounded-md border transition-colors ${themeClasses.input}`}>
-              <option className={themeClasses.option} value="default">{translations.settings.defaultVoice}</option>
-              {voices.map(voice => ( <option className={themeClasses.option} key={voice.voiceURI} value={voice.voiceURI}>{voice.name} ({voice.lang})</option> ))}
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="volume" className="block font-medium mb-1 opacity-80">{translations.settings.volume}: {Math.round(localSettings.volume * 100)}%</label>
-            <input id="volume" type="range" min="0" max="1" step="0.05" value={localSettings.volume} onChange={(e) => handleChange('volume', Number(e.target.value))} className={`w-full h-2 rounded-lg appearance-none cursor-pointer ${themeClasses.rangeTrack} ${themeClasses.accentColor}`} />
-          </div>
-
-          {/* Pre-notification Settings */}
-          <div className={`border-t pt-4 mt-6 ${isDarkMode ? 'border-white/20' : 'border-black/20'}`}>
-            <h3 className="text-lg font-semibold mb-2">{translations.settings.preNotificationTitle}</h3>
-            <div className="flex items-center">
-              <input type="checkbox" id="preNotificationEnabled" checked={localSettings.preNotificationEnabled} onChange={(e) => handleChange('preNotificationEnabled', e.target.checked)} className={`h-4 w-4 rounded border-2 bg-transparent ${themeClasses.accentColor}`} />
-              <label htmlFor="preNotificationEnabled" className="ml-2 block font-medium opacity-80">{translations.settings.enablePreNotification}</label>
-            </div>
-            
-            {localSettings.preNotificationEnabled && (
-              <div className={`space-y-4 mt-4 pl-2 border-l-2 ${isDarkMode ? 'border-white' : 'border-black'}`}>
-                <div>
-                  <label htmlFor="preNotificationTime" className="block font-medium mb-1 opacity-80">{translations.settings.preNotificationTimeLabel}</label>
-                  <select id="preNotificationTime" value={localSettings.preNotificationTime} onChange={(e) => handleChange('preNotificationTime', Number(e.target.value))} className={`w-full px-3 py-2 rounded-md border transition-colors ${themeClasses.input}`}>
-                    {Object.entries(translations.remindOptions).filter(([min]) => Number(min) > 0).map(([minutes, label]) => ( <option className={themeClasses.option} key={minutes} value={minutes}>{label}</option> ))}
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="preNotificationPrefix" className="block font-medium mb-1 opacity-80">{translations.settings.preNotificationPrefixLabel}</label>
-                  <input id="preNotificationPrefix" type="text" placeholder={translations.settings.preNotificationPrefixPlaceholder} value={localSettings.preNotificationPrefix} onChange={(e) => handleChange('preNotificationPrefix', e.target.value)} className={`w-full px-3 py-2 rounded-md border transition-colors ${themeClasses.input}`} />
-                </div>
-              </div>
-            )}
-          </div>
-          
-          {/* Workday Notification Settings */}
-          <div className={`border-t pt-4 mt-6 ${isDarkMode ? 'border-white/20' : 'border-black/20'}`}>
-            <h3 className="text-lg font-semibold mb-2">{translations.settings.workdayTitle}</h3>
-            <div className="flex items-center">
-              <input type="checkbox" id="workdayNotificationsEnabled" checked={localSettings.workdayNotificationsEnabled} onChange={(e) => handleChange('workdayNotificationsEnabled', e.target.checked)} className={`h-4 w-4 rounded border-2 bg-transparent ${themeClasses.accentColor}`} />
-              <label htmlFor="workdayNotificationsEnabled" className="ml-2 block font-medium opacity-80">{translations.settings.enableWorkdayNotifications}</label>
-            </div>
-             {localSettings.workdayNotificationsEnabled && (
-                <div className={`mt-4 pl-2 border-l-2 ${isDarkMode ? 'border-white' : 'border-black'} space-y-4`}>
+            <button
+                onClick={() => setActiveTab('advanced')}
+                className={`py-2 px-4 text-sm font-medium transition-colors border-b-2 ${
+                    activeTab === 'advanced'
+                    ? (isDarkMode ? 'border-white text-white' : 'border-black text-black')
+                    : `border-transparent opacity-60 hover:opacity-100 ${isDarkMode ? 'text-white' : 'text-black'}`
+                }`}
+            >
+                {translations.settings.tabAdvanced}
+            </button>
+        </div>
+        
+        <div className="overflow-y-auto flex-grow pr-2 -mr-2">
+            {activeTab === 'main' && (
+                <div className="space-y-4 text-sm">
+                    {/* Main Notification Settings */}
                     <div>
-                        <label htmlFor="userName" className="block font-medium mb-1 opacity-80">{translations.settings.yourNameLabel}</label>
-                        <input id="userName" type="text" placeholder={translations.settings.yourNamePlaceholder} value={localSettings.userName} onChange={(e) => handleChange('userName', e.target.value)} className={`w-full px-3 py-2 rounded-md border transition-colors ${themeClasses.input}`} />
-                    </div>
-                     <div className="mt-4">
-                        <h4 className="font-medium mb-2 opacity-80">{translations.settings.workHoursTitle}</h4>
-                        <div className="grid grid-cols-2 gap-4">
-                            <TimeSelect 
-                                id="workStartTime"
-                                label={translations.settings.workStartTime}
-                                value={localSettings.workStartTime}
-                                onChange={(value) => handleChange('workStartTime', value)}
-                                themeClasses={themeClasses}
-                            />
-                            <TimeSelect 
-                                id="lunchStartTime"
-                                label={translations.settings.lunchStartTime}
-                                value={localSettings.lunchStartTime}
-                                onChange={(value) => handleChange('lunchStartTime', value)}
-                                themeClasses={themeClasses}
-                            />
-                            <TimeSelect 
-                                id="lunchEndTime"
-                                label={translations.settings.lunchEndTime}
-                                value={localSettings.lunchEndTime}
-                                onChange={(value) => handleChange('lunchEndTime', value)}
-                                themeClasses={themeClasses}
-                            />
-                            <TimeSelect 
-                                id="workEndTime"
-                                label={translations.settings.workEndTime}
-                                value={localSettings.workEndTime}
-                                onChange={(value) => handleChange('workEndTime', value)}
-                                themeClasses={themeClasses}
-                            />
+                        <label htmlFor="ringtone" className="block font-medium mb-1 opacity-80">{translations.settings.ringtone}</label>
+                        <div className="flex items-center gap-2">
+                        <select
+                            id="ringtone"
+                            value={localSettings.ringtoneUrl}
+                            onChange={(e) => handleChange('ringtoneUrl', e.target.value)}
+                            className={`w-full px-3 py-2 rounded-md border transition-colors ${themeClasses.input}`}
+                        >
+                            {allRingtones.map(ringtone => (
+                            <option className={themeClasses.option} key={ringtone.name} value={ringtone.name}>{ringtone.name}</option>
+                            ))}
+                        </select>
+                        {selectedRingtone?.id && (
+                            <button
+                                type="button"
+                                onClick={handleDeleteRingtone}
+                                title={`Xóa nhạc chuông "${selectedRingtone.name}"`}
+                                className="p-2 rounded-full text-red-500 hover:bg-red-500/10 transition-colors flex-shrink-0"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        )}
                         </div>
+                        <button type="button" onClick={() => fileInputRef.current?.click()} className="opacity-80 hover:underline mt-2 text-sm">
+                            {translations.settings.uploadRingtone}
+                        </button>
+                        <input type="file" accept="audio/*" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
+                    </div>
+
+                    <div>
+                        <label htmlFor="duration" className="block font-medium mb-1 opacity-80">{translations.settings.duration}: {localSettings.ringtoneDuration}s</label>
+                        <input id="duration" type="range" min="1" max="10" step="1" value={localSettings.ringtoneDuration} onChange={(e) => handleChange('ringtoneDuration', Number(e.target.value))} className={`w-full h-2 rounded-lg appearance-none cursor-pointer ${themeClasses.rangeTrack} ${themeClasses.accentColor}`} />
+                    </div>
+
+                    <div>
+                        <label htmlFor="prefix" className="block font-medium mb-1 opacity-80">{translations.settings.notificationPrefixLabel}</label>
+                        <input id="prefix" type="text" placeholder={translations.settings.notificationPrefixPlaceholder} value={localSettings.notificationPrefix} onChange={(e) => handleChange('notificationPrefix', e.target.value)} className={`w-full px-3 py-2 rounded-md border transition-colors ${themeClasses.input}`} />
+                    </div>
+
+                    <div>
+                        <label htmlFor="voice" className="block font-medium mb-1 opacity-80">{translations.settings.voice}</label>
+                        <select id="voice" value={localSettings.voiceURI} onChange={(e) => handleChange('voiceURI', e.target.value)} className={`w-full px-3 py-2 rounded-md border transition-colors ${themeClasses.input}`}>
+                        <option className={themeClasses.option} value="default">{translations.settings.defaultVoice}</option>
+                        {voices.map(voice => ( <option className={themeClasses.option} key={voice.voiceURI} value={voice.voiceURI}>{voice.name} ({voice.lang})</option> ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label htmlFor="volume" className="block font-medium mb-1 opacity-80">{translations.settings.volume}: {Math.round(localSettings.volume * 100)}%</label>
+                        <input id="volume" type="range" min="0" max="1" step="0.05" value={localSettings.volume} onChange={(e) => handleChange('volume', Number(e.target.value))} className={`w-full h-2 rounded-lg appearance-none cursor-pointer ${themeClasses.rangeTrack} ${themeClasses.accentColor}`} />
                     </div>
                 </div>
-             )}
-          </div>
+            )}
+            
+            {activeTab === 'advanced' && (
+                <div className="space-y-6 text-sm">
+                    {/* Pre-notification Settings */}
+                    <div>
+                        <h3 className="text-lg font-semibold mb-2">{translations.settings.preNotificationTitle}</h3>
+                        <div className="flex items-center">
+                        <input type="checkbox" id="preNotificationEnabled" checked={localSettings.preNotificationEnabled} onChange={(e) => handleChange('preNotificationEnabled', e.target.checked)} className={`h-4 w-4 rounded border-2 bg-transparent ${themeClasses.accentColor}`} />
+                        <label htmlFor="preNotificationEnabled" className="ml-2 block font-medium opacity-80">{translations.settings.enablePreNotification}</label>
+                        </div>
+                        
+                        {localSettings.preNotificationEnabled && (
+                        <div className={`space-y-4 mt-4 pl-2 border-l-2 ${isDarkMode ? 'border-white/50' : 'border-black/50'}`}>
+                            <div>
+                            <label htmlFor="preNotificationTime" className="block font-medium mb-1 opacity-80">{translations.settings.preNotificationTimeLabel}</label>
+                            <select id="preNotificationTime" value={localSettings.preNotificationTime} onChange={(e) => handleChange('preNotificationTime', Number(e.target.value))} className={`w-full px-3 py-2 rounded-md border transition-colors ${themeClasses.input}`}>
+                                {Object.entries(translations.remindOptions).filter(([min]) => Number(min) > 0).map(([minutes, label]) => ( <option className={themeClasses.option} key={minutes} value={minutes}>{label}</option> ))}
+                            </select>
+                            </div>
+                            <div>
+                            <label htmlFor="preNotificationPrefix" className="block font-medium mb-1 opacity-80">{translations.settings.preNotificationPrefixLabel}</label>
+                            <input id="preNotificationPrefix" type="text" placeholder={translations.settings.preNotificationPrefixPlaceholder} value={localSettings.preNotificationPrefix} onChange={(e) => handleChange('preNotificationPrefix', e.target.value)} className={`w-full px-3 py-2 rounded-md border transition-colors ${themeClasses.input}`} />
+                            </div>
+                        </div>
+                        )}
+                    </div>
+                    
+                    {/* Workday Notification Settings */}
+                    <div>
+                        <h3 className="text-lg font-semibold mb-2">{translations.settings.workdayTitle}</h3>
+                        <div className="flex items-center">
+                        <input type="checkbox" id="workdayNotificationsEnabled" checked={localSettings.workdayNotificationsEnabled} onChange={(e) => handleChange('workdayNotificationsEnabled', e.target.checked)} className={`h-4 w-4 rounded border-2 bg-transparent ${themeClasses.accentColor}`} />
+                        <label htmlFor="workdayNotificationsEnabled" className="ml-2 block font-medium opacity-80">{translations.settings.enableWorkdayNotifications}</label>
+                        </div>
+                        {localSettings.workdayNotificationsEnabled && (
+                            <div className={`mt-4 pl-2 border-l-2 ${isDarkMode ? 'border-white/50' : 'border-black/50'} space-y-4`}>
+                                <div>
+                                    <label htmlFor="userName" className="block font-medium mb-1 opacity-80">{translations.settings.yourNameLabel}</label>
+                                    <input id="userName" type="text" placeholder={translations.settings.yourNamePlaceholder} value={localSettings.userName} onChange={(e) => handleChange('userName', e.target.value)} className={`w-full px-3 py-2 rounded-md border transition-colors ${themeClasses.input}`} />
+                                </div>
+                                <div className="mt-4">
+                                    <h4 className="font-medium mb-2 opacity-80">{translations.settings.workHoursTitle}</h4>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <TimeSelect 
+                                            id="workStartTime"
+                                            label={translations.settings.workStartTime}
+                                            value={localSettings.workStartTime}
+                                            onChange={(value) => handleChange('workStartTime', value)}
+                                            themeClasses={themeClasses}
+                                        />
+                                        <TimeSelect 
+                                            id="lunchStartTime"
+                                            label={translations.settings.lunchStartTime}
+                                            value={localSettings.lunchStartTime}
+                                            onChange={(value) => handleChange('lunchStartTime', value)}
+                                            themeClasses={themeClasses}
+                                        />
+                                        <TimeSelect 
+                                            id="lunchEndTime"
+                                            label={translations.settings.lunchEndTime}
+                                            value={localSettings.lunchEndTime}
+                                            onChange={(value) => handleChange('lunchEndTime', value)}
+                                            themeClasses={themeClasses}
+                                        />
+                                        <TimeSelect 
+                                            id="workEndTime"
+                                            label={translations.settings.workEndTime}
+                                            value={localSettings.workEndTime}
+                                            onChange={(value) => handleChange('workEndTime', value)}
+                                            themeClasses={themeClasses}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
 
-        <div className="flex justify-between items-center mt-8">
+        <div className="flex justify-between items-center mt-6 pt-4 border-t flex-shrink-0 ${themeClasses.border}">
             <button type="button" onClick={handlePreview} className={`font-bold py-2 px-4 rounded-lg transition-colors ${themeClasses.buttonSecondary}`}>
               {translations.settings.preview}
             </button>

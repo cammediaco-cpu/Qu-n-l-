@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { translations, DEFAULT_PROFILE_NAME } from '../constants';
 
 interface ProfileManagerProps {
@@ -16,17 +16,6 @@ interface ProfileManagerProps {
 const ProfileManager: React.FC<ProfileManagerProps> = ({ profiles, activeProfile, onAddProfile, onDeleteProfile, onSwitchProfile, onExportProfile, onImportProfile, isDarkMode }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [newProfileName, setNewProfileName] = useState('');
-  const wrapperRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   const handleAdd = () => {
     if (newProfileName.trim()) {
@@ -36,10 +25,14 @@ const ProfileManager: React.FC<ProfileManagerProps> = ({ profiles, activeProfile
     }
   };
 
+  const handleClose = () => {
+    setIsOpen(false);
+  };
+
   return (
-    <div className="relative" ref={wrapperRef}>
+    <div>
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => setIsOpen(true)}
         className={`flex items-center gap-2 p-3 rounded-full ${isDarkMode ? 'hover:bg-white/20' : 'hover:bg-black/20'} transition-colors duration-300`}
         aria-haspopup="true"
         aria-expanded={isOpen}
@@ -51,76 +44,96 @@ const ProfileManager: React.FC<ProfileManagerProps> = ({ profiles, activeProfile
       </button>
 
       {isOpen && (
-        <div className={`absolute top-full left-0 mt-2 w-64 ${isDarkMode ? 'bg-black text-white' : 'bg-white text-black'} rounded-lg shadow-xl border ${isDarkMode ? 'border-white' : 'border-black'} z-10 p-4`}>
-          <h3 className="font-bold text-lg mb-3">{translations.profiles.manage}</h3>
-          
-          <div className="space-y-2 mb-4 max-h-40 overflow-y-auto">
-            {profiles.map(profile => (
-              <button
-                key={profile}
-                onClick={() => { onSwitchProfile(profile); setIsOpen(false); }}
-                className={`w-full text-left px-3 py-2 rounded-md transition-colors text-sm ${
-                  activeProfile === profile 
-                    ? (isDarkMode ? 'bg-white text-black' : 'bg-black text-white')
-                    : (isDarkMode ? 'hover:bg-white/10' : 'hover:bg-black/10')
-                }`}
-              >
-                {profile}
-              </button>
-            ))}
-          </div>
-
-          <div className={`border-t ${isDarkMode ? 'border-white/20' : 'border-black/20'} pt-3`}>
-            <div className="flex items-center gap-2">
-                <button 
-                    onClick={onExportProfile}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm transition-colors ${isDarkMode ? 'hover:bg-white/10' : 'hover:bg-black/10'}`}
-                    title={translations.profiles.exportProfile}
+        <div 
+          className="fixed inset-0 bg-black/50 flex justify-center items-center z-50"
+          onClick={handleClose}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="profile-manager-title"
+        >
+          <div 
+            className={`w-full max-w-sm p-6 ${isDarkMode ? 'bg-black/30 backdrop-blur-xl border-white/20 text-white' : 'bg-white/50 backdrop-blur-xl border-black/20 text-black'} rounded-2xl shadow-xl border`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="profile-manager-title" className="text-xl font-bold mb-4">{translations.profiles.manage}</h3>
+            
+            <div className="space-y-2 mb-4 max-h-40 overflow-y-auto">
+              {profiles.map(profile => (
+                <button
+                  key={profile}
+                  onClick={() => { onSwitchProfile(profile); setIsOpen(false); }}
+                  className={`w-full text-left px-3 py-2 rounded-md transition-colors text-sm ${
+                    activeProfile === profile 
+                      ? (isDarkMode ? 'bg-white text-black' : 'bg-black text-white')
+                      : (isDarkMode ? 'hover:bg-white/10' : 'hover:bg-black/10')
+                  }`}
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    {translations.profiles.exportProfile}
+                  {profile}
                 </button>
-                <label 
-                    htmlFor="import-profile-input"
-                    className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm transition-colors cursor-pointer ${isDarkMode ? 'hover:bg-white/10' : 'hover:bg-black/10'}`}
-                    title={translations.profiles.importProfile}
+              ))}
+            </div>
+
+            <div className={`border-t ${isDarkMode ? 'border-white/20' : 'border-black/20'} pt-4`}>
+              <div className="flex items-center gap-2">
+                  <button 
+                      onClick={onExportProfile}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm transition-colors ${isDarkMode ? 'hover:bg-white/10' : 'hover:bg-black/10'}`}
+                      title={translations.profiles.exportProfile}
+                  >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      {translations.profiles.exportProfile}
+                  </button>
+                  <label 
+                      htmlFor="import-profile-input"
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm transition-colors cursor-pointer ${isDarkMode ? 'hover:bg-white/10' : 'hover:bg-black/10'}`}
+                      title={translations.profiles.importProfile}
+                  >
+                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
+                      {translations.profiles.importProfile}
+                  </label>
+                  <input id="import-profile-input" type="file" accept=".json,application/json" className="hidden" onChange={onImportProfile} />
+              </div>
+            </div>
+
+            <div className={`border-t ${isDarkMode ? 'border-white/20' : 'border-black/20'} pt-4 mt-4`}>
+              <label htmlFor="new-profile" className="text-sm font-medium">{translations.profiles.add}</label>
+              <div className="flex gap-2 mt-1">
+                <input
+                  id="new-profile"
+                  type="text"
+                  value={newProfileName}
+                  onChange={e => setNewProfileName(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleAdd()}
+                  placeholder={translations.profiles.placeholder}
+                  className={`flex-grow px-2 py-1 text-sm rounded-md ${isDarkMode ? 'bg-white/10' : 'bg-black/10'} border ${isDarkMode ? 'border-white/50' : 'border-black/50'} focus:outline-none focus:ring-1 ${isDarkMode ? 'focus:ring-white' : 'focus:ring-black'}`}
+                />
+                <button onClick={handleAdd} className={`${isDarkMode ? 'bg-white text-black' : 'bg-black text-white'} font-bold px-3 py-1 text-sm rounded-md transition`}>
+                  +
+                </button>
+              </div>
+              {activeProfile !== DEFAULT_PROFILE_NAME && (
+                <button
+                  onClick={() => onDeleteProfile(activeProfile)}
+                  className="w-full mt-4 text-sm text-red-500 hover:bg-red-500/10 py-1 rounded-md transition-colors"
                 >
-                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                    </svg>
-                    {translations.profiles.importProfile}
-                </label>
-                <input id="import-profile-input" type="file" accept=".json,application/json" className="hidden" onChange={onImportProfile} />
+                  {translations.profiles.delete} "{activeProfile}"
+                </button>
+              )}
             </div>
-          </div>
 
-
-          <div className={`border-t ${isDarkMode ? 'border-white/20' : 'border-black/20'} pt-3 mt-3`}>
-            <label htmlFor="new-profile" className="text-sm font-medium">{translations.profiles.add}</label>
-            <div className="flex gap-2 mt-1">
-              <input
-                id="new-profile"
-                type="text"
-                value={newProfileName}
-                onChange={e => setNewProfileName(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleAdd()}
-                placeholder={translations.profiles.placeholder}
-                className={`flex-grow px-2 py-1 text-sm rounded-md ${isDarkMode ? 'bg-white/10' : 'bg-black/10'} border ${isDarkMode ? 'border-white/50' : 'border-black/50'} focus:outline-none focus:ring-1 ${isDarkMode ? 'focus:ring-white' : 'focus:ring-black'}`}
-              />
-              <button onClick={handleAdd} className={`${isDarkMode ? 'bg-white text-black' : 'bg-black text-white'} font-bold px-3 py-1 text-sm rounded-md transition`}>
-                +
-              </button>
+             <div className="flex justify-end gap-4 mt-6">
+                <button
+                    type="button"
+                    onClick={handleClose}
+                    className={`font-bold py-2 px-4 rounded-lg transition-colors ${isDarkMode ? 'border border-white hover:bg-white/10' : 'border border-black hover:bg-black/10'}`}
+                >
+                    {translations.settings.close}
+                </button>
             </div>
-            {activeProfile !== DEFAULT_PROFILE_NAME && (
-              <button
-                onClick={() => onDeleteProfile(activeProfile)}
-                className="w-full mt-4 text-sm text-red-500 hover:bg-red-500/10 py-1 rounded-md transition-colors"
-              >
-                {translations.profiles.delete} "{activeProfile}"
-              </button>
-            )}
           </div>
         </div>
       )}

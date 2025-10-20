@@ -117,6 +117,8 @@ export const translations = {
     lunchStartTime: 'Bắt đầu nghỉ trưa',
     lunchEndTime: 'Kết thúc nghỉ trưa',
     workEndTime: 'Kết thúc làm việc',
+    tabMain: 'Âm thanh & Lời nhắc',
+    tabAdvanced: 'Nâng cao',
   },
 };
 
