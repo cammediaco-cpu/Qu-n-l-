@@ -26,6 +26,10 @@ export const DEFAULT_SETTINGS = {
   preNotificationPrefix: 'Sắp đến giờ:',
   workdayNotificationsEnabled: true,
   userName: 'Sếp',
+  workStartTime: '08:30',
+  lunchStartTime: '12:00',
+  lunchEndTime: '13:30',
+  workEndTime: '17:00',
 };
 
 
@@ -76,8 +80,14 @@ export const translations = {
     exportProfile: 'Tải xuống hồ sơ',
     importProfile: 'Tải lên hồ sơ',
     confirmImport: 'Bạn có chắc muốn tải lên hồ sơ này không? Dữ liệu hiện tại của hồ sơ sẽ bị ghi đè.',
-    importSuccess: 'Hồ sơ đã được tải lên thành công!',
+    importSuccess: 'Hồ sơ đã được áp dụng thành công!',
     importError: 'Tệp không hợp lệ hoặc đã bị lỗi. Vui lòng kiểm tra lại.',
+    confirmImportTitle: 'Tùy chọn Tải lên Hồ sơ',
+    confirmImportMessage: 'Chọn dữ liệu bạn muốn áp dụng cho hồ sơ hiện tại. Các mục được chọn sẽ ghi đè lên dữ liệu hiện có.',
+    importOptionSchedules: 'Lịch trình & Công việc',
+    importOptionSettings: 'Cài đặt thông báo & Giao diện',
+    importOptionCategories: 'Phân loại',
+    confirm: 'Áp dụng',
   },
   settings: {
     title: 'Cài Đặt Thông Báo',
@@ -102,6 +112,11 @@ export const translations = {
     enableWorkdayNotifications: 'Bật thông báo theo giờ làm việc',
     yourNameLabel: 'Tên/Biệt danh của bạn',
     yourNamePlaceholder: 'Ví dụ: Sếp Tâm, Anh A,...',
+    workHoursTitle: 'Tùy chỉnh giờ làm việc',
+    workStartTime: 'Bắt đầu làm việc',
+    lunchStartTime: 'Bắt đầu nghỉ trưa',
+    lunchEndTime: 'Kết thúc nghỉ trưa',
+    workEndTime: 'Kết thúc làm việc',
   },
 };
 

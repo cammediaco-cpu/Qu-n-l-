@@ -31,4 +31,14 @@ export interface AppSettings {
   // Workday notifications
   workdayNotificationsEnabled: boolean;
   userName: string;
+  workStartTime: string;
+  lunchStartTime: string;
+  lunchEndTime: string;
+  workEndTime: string;
+}
+
+export interface ProfileData {
+  schedules: Schedule[];
+  settings: AppSettings;
+  categories: Category[];
 }

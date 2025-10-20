@@ -305,9 +305,32 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose
               <label htmlFor="workdayNotificationsEnabled" className="ml-2 block font-medium opacity-80">{translations.settings.enableWorkdayNotifications}</label>
             </div>
              {localSettings.workdayNotificationsEnabled && (
-                <div className={`mt-4 pl-2 border-l-2 ${isDarkMode ? 'border-white' : 'border-black'}`}>
-                    <label htmlFor="userName" className="block font-medium mb-1 opacity-80">{translations.settings.yourNameLabel}</label>
-                    <input id="userName" type="text" placeholder={translations.settings.yourNamePlaceholder} value={localSettings.userName} onChange={(e) => handleChange('userName', e.target.value)} className={`w-full px-3 py-2 rounded-md border transition-colors ${themeClasses.input}`} />
+                <div className={`mt-4 pl-2 border-l-2 ${isDarkMode ? 'border-white' : 'border-black'} space-y-4`}>
+                    <div>
+                        <label htmlFor="userName" className="block font-medium mb-1 opacity-80">{translations.settings.yourNameLabel}</label>
+                        <input id="userName" type="text" placeholder={translations.settings.yourNamePlaceholder} value={localSettings.userName} onChange={(e) => handleChange('userName', e.target.value)} className={`w-full px-3 py-2 rounded-md border transition-colors ${themeClasses.input}`} />
+                    </div>
+                     <div className="mt-4">
+                        <h4 className="font-medium mb-2 opacity-80">{translations.settings.workHoursTitle}</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label htmlFor="workStartTime" className="block text-sm font-medium mb-1 opacity-70">{translations.settings.workStartTime}</label>
+                                <input id="workStartTime" type="time" value={localSettings.workStartTime} onChange={(e) => handleChange('workStartTime', e.target.value)} className={`w-full px-3 py-1.5 rounded-md border transition-colors ${themeClasses.input}`} />
+                            </div>
+                            <div>
+                                <label htmlFor="lunchStartTime" className="block text-sm font-medium mb-1 opacity-70">{translations.settings.lunchStartTime}</label>
+                                <input id="lunchStartTime" type="time" value={localSettings.lunchStartTime} onChange={(e) => handleChange('lunchStartTime', e.target.value)} className={`w-full px-3 py-1.5 rounded-md border transition-colors ${themeClasses.input}`} />
+                            </div>
+                            <div>
+                                <label htmlFor="lunchEndTime" className="block text-sm font-medium mb-1 opacity-70">{translations.settings.lunchEndTime}</label>
+                                <input id="lunchEndTime" type="time" value={localSettings.lunchEndTime} onChange={(e) => handleChange('lunchEndTime', e.target.value)} className={`w-full px-3 py-1.5 rounded-md border transition-colors ${themeClasses.input}`} />
+                            </div>
+                            <div>
+                                <label htmlFor="workEndTime" className="block text-sm font-medium mb-1 opacity-70">{translations.settings.workEndTime}</label>
+                                <input id="workEndTime" type="time" value={localSettings.workEndTime} onChange={(e) => handleChange('workEndTime', e.target.value)} className={`w-full px-3 py-1.5 rounded-md border transition-colors ${themeClasses.input}`} />
+                            </div>
+                        </div>
+                    </div>
                 </div>
              )}
           </div>

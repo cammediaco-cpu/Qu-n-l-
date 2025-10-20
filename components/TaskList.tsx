@@ -42,28 +42,12 @@ const WeekView: React.FC<WeekViewProps> = ({ schedules, categories, onEdit, onDe
       <div className="grid grid-cols-7 gap-2 mt-2 flex-grow min-h-0">
         {dayHeaders.map((_, index) => {
           const jsDayIndex = (index + 1) % 7;
-          const morningSchedules = schedules
-            .filter(s => s.day === jsDayIndex && s.time <= '13:30')
+          const daySchedules = schedules
+            .filter(s => s.day === jsDayIndex)
             .sort((a, b) => a.time.localeCompare(b.time));
           return (
-            <div key={`morning-${index}`} className={`border ${borderClass} p-1 overflow-y-auto`}>
-              {renderSchedules(morningSchedules)}
-            </div>
-          );
-        })}
-      </div>
-      
-      <div className="text-center text-xs my-2 opacity-70">NGHỈ TRƯA</div>
-
-      <div className="grid grid-cols-7 gap-2 flex-grow min-h-0">
-        {dayHeaders.map((_, index) => {
-          const jsDayIndex = (index + 1) % 7;
-          const afternoonSchedules = schedules
-            .filter(s => s.day === jsDayIndex && s.time > '13:30')
-            .sort((a, b) => a.time.localeCompare(b.time));
-          return (
-            <div key={`afternoon-${index}`} className={`border ${borderClass} p-1 overflow-y-auto`}>
-              {renderSchedules(afternoonSchedules)}
+            <div key={`day-${index}`} className={`border ${borderClass} p-1 overflow-y-auto`}>
+              {renderSchedules(daySchedules)}
             </div>
           );
         })}

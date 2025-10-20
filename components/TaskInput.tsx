@@ -8,10 +8,12 @@ interface ScheduleModalProps {
   onClose: () => void;
   categories: Category[];
   setCategories: React.Dispatch<React.SetStateAction<Category[]>>;
+  schedules: Schedule[];
+  setSchedules: React.Dispatch<React.SetStateAction<Schedule[]>>;
   isDarkMode: boolean;
 }
 
-const ScheduleModal: React.FC<ScheduleModalProps> = ({ schedule, onSave, onClose, categories, setCategories, isDarkMode }) => {
+const ScheduleModal: React.FC<ScheduleModalProps> = ({ schedule, onSave, onClose, categories, setCategories, schedules, setSchedules, isDarkMode }) => {
   const [time, setTime] = useState('09:00');
   const [text, setText] = useState('');
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
@@ -22,6 +24,11 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ schedule, onSave, onClose
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryColor, setNewCategoryColor] = useState('#4f46e5');
+
+  // States for editing an existing category
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [editCategoryName, setEditCategoryName] = useState('');
+  const [editCategoryColor, setEditCategoryColor] = useState('#4f46e5');
 
   useEffect(() => {
     if (schedule) {
@@ -40,6 +47,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ schedule, onSave, onClose
       setError('');
     }
     setIsAddingCategory(false);
+    setEditingCategory(null);
     setNewCategoryName('');
   }, [schedule]);
 
@@ -77,6 +85,41 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ schedule, onSave, onClose
       setNewCategoryName('');
     }
   };
+
+  const handleSaveEdit = () => {
+    if (!editingCategory || !editCategoryName.trim()) return;
+
+    const updatedCategories = categories.map(c => 
+      c.id === editingCategory.id 
+        ? { ...c, name: editCategoryName.trim(), color: editCategoryColor } 
+        : c
+    );
+    setCategories(updatedCategories);
+    setEditingCategory(null);
+  };
+
+  const handleDeleteCategory = () => {
+    if (!editingCategory) return;
+    if (window.confirm(`Bạn có chắc muốn xóa phân loại "${editingCategory.name}" không? Các công việc thuộc phân loại này sẽ được giữ lại nhưng không còn phân loại.`)) {
+        // Remove categoryId from schedules that use it
+        setSchedules(prevSchedules => 
+            prevSchedules.map(s => 
+                s.categoryId === editingCategory.id ? { ...s, categoryId: undefined } : s
+            )
+        );
+        
+        // Remove the category itself
+        setCategories(categories.filter(c => c.id !== editingCategory.id));
+        
+        // If the deleted category was selected, unselect it
+        if (selectedCategoryId === editingCategory.id) {
+            setSelectedCategoryId(undefined);
+        }
+
+        setEditingCategory(null);
+    }
+  };
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -178,20 +221,41 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ schedule, onSave, onClose
                         {translations.none}
                     </button>
                   {categories.map((cat) => (
+                    <div key={cat.id} className="relative group">
                       <button
-                          key={cat.id}
                           type="button"
                           onClick={() => setSelectedCategoryId(cat.id)}
-                          className={`${catButtonBase} ${selectedCategoryId === cat.id ? '' : catButtonInactive}`}
+                          className={`${catButtonBase} pr-7 ${selectedCategoryId === cat.id ? '' : catButtonInactive}`}
                           style={{ borderColor: selectedCategoryId === cat.id ? cat.color : 'transparent' }}
                       >
                           <span style={{ backgroundColor: cat.color }} className="w-3 h-3 rounded-full"></span>
                           {cat.name}
                       </button>
+                      <button
+                          type="button"
+                          onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingCategory(cat);
+                              setEditCategoryName(cat.name);
+                              setEditCategoryColor(cat.color);
+                              setIsAddingCategory(false);
+                          }}
+                          className={`absolute top-0 right-0 h-full w-7 flex items-center justify-center opacity-0 group-hover:opacity-75 hover:!opacity-100 transition-opacity rounded-r-full ${isDarkMode ? 'text-white/80' : 'text-black/80'}`}
+                          title={`Sửa "${cat.name}"`}
+                      >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                            <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />
+                          </svg>
+                      </button>
+                    </div>
                   ))}
                   <button
                     type="button"
-                    onClick={() => setIsAddingCategory(!isAddingCategory)}
+                    onClick={() => {
+                        setIsAddingCategory(!isAddingCategory);
+                        setEditingCategory(null);
+                    }}
                     className={`h-8 w-8 rounded-full flex items-center justify-center transition-colors ${themeClasses.dayButton}`}
                     title={translations.addCategory}
                   >
@@ -200,30 +264,69 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ schedule, onSave, onClose
               </div>
           </div>
           
-          {isAddingCategory && (
-            <div className={`p-3 rounded-md border ${isDarkMode ? 'border-white/20' : 'border-black/20'} mb-4 flex items-center gap-2 animate-fade-in`}>
-              <input
-                  type="text"
-                  placeholder={translations.categoryName}
-                  value={newCategoryName}
-                  onChange={(e) => setNewCategoryName(e.target.value)}
-                  className={`flex-grow px-2 py-1 text-sm rounded-md ${themeClasses.inputBg} transition-colors`}
-              />
-              <input
-                  type="color"
-                  value={newCategoryColor}
-                  onChange={(e) => setNewCategoryColor(e.target.value)}
-                  className="w-8 h-8 p-0 border-none rounded-md bg-transparent cursor-pointer"
-                  title="Chọn màu"
-              />
-              <button
-                  type="button"
-                  onClick={handleAddNewCategory}
-                  className={`font-bold py-1 px-3 rounded-lg text-sm transition-colors ${themeClasses.button}`}
-              >
-                  {translations.save}
-              </button>
-               <style>{`
+          {(isAddingCategory || editingCategory) && (
+            <div className={`p-3 rounded-md border ${isDarkMode ? 'border-white/20' : 'border-black/20'} mb-4 animate-fade-in`}>
+              {editingCategory ? (
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-sm">Chỉnh sửa phân loại</h4>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder={translations.categoryName}
+                      value={editCategoryName}
+                      onChange={(e) => setEditCategoryName(e.target.value)}
+                      className={`flex-grow px-2 py-1 text-sm rounded-md ${themeClasses.inputBg} transition-colors`}
+                    />
+                    <input
+                      type="color"
+                      value={editCategoryColor}
+                      onChange={(e) => setEditCategoryColor(e.target.value)}
+                      className="w-8 h-8 p-0 border-none rounded-md bg-transparent cursor-pointer"
+                      title="Chọn màu"
+                    />
+                  </div>
+                  <div className="flex justify-end items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleDeleteCategory}
+                      className="text-red-500 hover:bg-red-500/10 text-xs font-bold py-1 px-2 rounded-md transition-colors mr-auto"
+                    >
+                      {translations.delete}
+                    </button>
+                    <button type="button" onClick={() => setEditingCategory(null)} className={`font-bold py-1 px-3 rounded-lg text-sm transition-colors ${themeClasses.buttonSecondary}`}>
+                      {translations.cancel}
+                    </button>
+                    <button type="button" onClick={handleSaveEdit} className={`font-bold py-1 px-3 rounded-lg text-sm transition-colors ${themeClasses.button}`}>
+                      {translations.save}
+                    </button>
+                  </div>
+                </div>
+              ) : isAddingCategory ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder={translations.categoryName}
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    className={`flex-grow px-2 py-1 text-sm rounded-md ${themeClasses.inputBg} transition-colors`}
+                  />
+                  <input
+                    type="color"
+                    value={newCategoryColor}
+                    onChange={(e) => setNewCategoryColor(e.target.value)}
+                    className="w-8 h-8 p-0 border-none rounded-md bg-transparent cursor-pointer"
+                    title="Chọn màu"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddNewCategory}
+                    className={`font-bold py-1 px-3 rounded-lg text-sm transition-colors ${themeClasses.button}`}
+                  >
+                    {translations.save}
+                  </button>
+                </div>
+              ) : null}
+              <style>{`
                 @keyframes fade-in {
                   from { opacity: 0; transform: translateY(-10px); }
                   to { opacity: 1; transform: translateY(0); }

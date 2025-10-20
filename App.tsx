@@ -6,7 +6,8 @@ import WeekView from './components/TaskList';
 import ScheduleModal from './components/TaskInput';
 import SettingsModal from './components/SettingsModal';
 import NotificationPopup from './components/NotificationPopup';
-import { Schedule, ModalState, AppSettings, Category } from './types';
+import ImportProfileModal, { ImportOptions } from './components/ImportProfileModal';
+import { Schedule, ModalState, AppSettings, Category, ProfileData } from './types';
 import useLocalStorage from './hooks/useLocalStorage';
 import {
   LOCAL_STORAGE_SCHEDULES_BASE_KEY,
@@ -89,6 +90,9 @@ const App: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [activePopup, setActivePopup] = useState<NotificationPopupData | null>(null);
   const [allRingtones, setAllRingtones] = useState<RingtoneOption[]>([...DEFAULT_RINGTONES]);
+
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [pendingImportData, setPendingImportData] = useState<ProfileData | null>(null);
   
   const appRef = useRef<HTMLDivElement>(null);
 
@@ -236,16 +240,16 @@ const App: React.FC = () => {
       if (settings.workdayNotificationsEnabled) {
         const userName = settings.userName || 'bạn';
         const workdayNotifications: { [key: string]: string } = {
-          '08:30': `Chào buổi sáng ${userName}. Đã đến giờ làm việc rồi, bắt đầu một ngày thật năng suất nhé!`,
-          '12:00': `${userName} ơi, đã đến giờ nghỉ trưa. Tạm gác công việc lại và đi ăn thôi! Đừng quên chăm sóc sức khoẻ nhé.`,
-          '13:30': `Đến giờ làm việc buổi chiều rồi ${userName}. Cùng tiếp tục nào!`,
-          '17:00': `Đã hết giờ làm việc. Chúc ${userName} có một buổi tối vui vẻ!`,
+            [settings.workStartTime]: `Chào buổi sáng ${userName}. Đã đến giờ làm việc rồi, bắt đầu một ngày thật năng suất nhé!`,
+            [settings.lunchStartTime]: `${userName} ơi, đã đến giờ nghỉ trưa. Tạm gác công việc lại và đi ăn thôi! Đừng quên chăm sóc sức khoẻ nhé.`,
+            [settings.lunchEndTime]: `Đến giờ làm việc buổi chiều rồi ${userName}. Cùng tiếp tục nào!`,
+            [settings.workEndTime]: `Đã hết giờ làm việc. Chúc ${userName} có một buổi tối vui vẻ!`,
         };
         
         if (currentDay >= 1 && currentDay <= 5) {
             for (const time in workdayNotifications) {
                 const key = `workday-${time}`;
-                if (currentTime === time && !firedNotifications.has(key)) {
+                if (time && currentTime === time && !firedNotifications.has(key)) {
                     const message = workdayNotifications[time];
                     speechJobs.push({ text: message });
                     notificationKeysToFire.push(key);
@@ -368,15 +372,32 @@ const App: React.FC = () => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   }, [schedules, settings, categories, activeProfile]);
+  
+  const handleCloseImportModal = useCallback(() => {
+    setIsImportModalOpen(false);
+    setPendingImportData(null);
+  }, []);
+
+  const handleConfirmImport = useCallback((options: ImportOptions) => {
+    if (!pendingImportData) return;
+
+    if (options.importSchedules) {
+      setSchedules(pendingImportData.schedules);
+    }
+    if (options.importSettings) {
+      setSettings(pendingImportData.settings);
+    }
+    if (options.importCategories) {
+      setCategories(pendingImportData.categories);
+    }
+
+    alert(translations.profiles.importSuccess);
+    handleCloseImportModal();
+  }, [pendingImportData, setSchedules, setSettings, setCategories, handleCloseImportModal]);
 
   const handleImportProfile = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
-    if (!window.confirm(translations.profiles.confirmImport)) {
-        event.target.value = ''; // Reset file input
-        return;
-    }
 
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -386,12 +407,9 @@ const App: React.FC = () => {
             
             const parsedData = JSON.parse(text);
 
-            // Basic validation
             if (Array.isArray(parsedData.schedules) && typeof parsedData.settings === 'object' && Array.isArray(parsedData.categories)) {
-                setSchedules(parsedData.schedules);
-                setSettings(parsedData.settings);
-                setCategories(parsedData.categories);
-                alert(translations.profiles.importSuccess);
+                setPendingImportData(parsedData);
+                setIsImportModalOpen(true);
             } else {
                 throw new Error("Invalid profile file structure");
             }
@@ -399,11 +417,11 @@ const App: React.FC = () => {
             console.error("Failed to import profile:", error);
             alert(translations.profiles.importError);
         } finally {
-            event.target.value = ''; // Reset file input regardless of success/fail
+            event.target.value = '';
         }
     };
     reader.readAsText(file);
-  }, [setSchedules, setSettings, setCategories]);
+  }, []);
 
   const themeClass = isDarkMode ? 'bg-black text-white' : 'bg-white text-black';
 
@@ -468,6 +486,8 @@ const App: React.FC = () => {
           onClose={handleCloseModal}
           categories={categories}
           setCategories={setCategories}
+          schedules={schedules}
+          setSchedules={setSchedules}
           isDarkMode={isDarkMode}
         />
       )}
@@ -488,6 +508,14 @@ const App: React.FC = () => {
           countdownTarget={activePopup.countdownTarget}
           onClose={() => setActivePopup(null)}
           isDarkMode={isDarkMode}
+        />
+      )}
+      {isImportModalOpen && (
+        <ImportProfileModal
+            isOpen={isImportModalOpen}
+            onClose={handleCloseImportModal}
+            onConfirm={handleConfirmImport}
+            isDarkMode={isDarkMode}
         />
       )}
     </div>
