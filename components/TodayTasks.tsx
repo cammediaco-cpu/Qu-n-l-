@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Schedule, Category } from '../types';
 import { translations } from '../constants';
@@ -12,46 +13,41 @@ interface TodayTasksProps {
 const TodayTasks: React.FC<TodayTasksProps> = ({ schedules, categories, onToggleComplete, isDarkMode }) => {
   const todayIndex = new Date().getDay();
   const todaySchedules = schedules
-    .filter(s => s.day === todayIndex && !s.isCompleted)
+    .filter(s => s.day === todayIndex)
     .sort((a, b) => a.time.localeCompare(b.time));
 
-  const hasTasksToday = schedules.some(s => s.day === todayIndex);
-
-  if (!hasTasksToday) {
-    return null; // Don't show anything if there are no tasks for today
-  }
+  const uncompletedSchedules = todaySchedules.filter(s => !s.isCompleted);
+  const hasTasksToday = todaySchedules.length > 0;
   
   const checkboxClass = isDarkMode 
     ? "accent-white"
     : "accent-black";
-  
-  const sectionClass = isDarkMode 
-    ? 'bg-black/40 backdrop-blur-xl border border-white/20' 
-    : 'bg-white/50 backdrop-blur-xl border border-black/20';
 
   return (
-    <section className={`p-4 rounded-2xl shadow-lg transition-colors duration-500 ${sectionClass}`}>
-      <h2 className="text-sm font-semibold mb-3 opacity-80">
+    <section className="w-[450px] flex-shrink-0">
+      <h2 className="text-xl font-semibold mb-3 opacity-80">
         {translations.todayTasksTitle}
       </h2>
       
-      {todaySchedules.length > 0 ? (
-        <ul className="space-y-2">
-          {todaySchedules.map(task => {
+      {!hasTasksToday ? (
+        <p className="text-lg opacity-60">{translations.noTasksToday}</p>
+      ) : uncompletedSchedules.length > 0 ? (
+        <div className="grid grid-cols-2 gap-x-12 gap-y-4 max-h-[30vh] overflow-y-auto">
+          {uncompletedSchedules.map(task => {
             const category = task.categoryId ? categories.find(c => c.id === task.categoryId) : null;
             const textColorStyle = category ? { color: category.color } : {};
 
             return (
-              <li
+              <div
                 key={task.id}
-                className="flex items-center gap-3 text-sm"
+                className="flex items-start gap-3 text-base"
               >
                 <input
                   type="checkbox"
                   id={`task-${task.id}`}
                   checked={task.isCompleted}
                   onChange={() => onToggleComplete(task.id)}
-                  className={`h-4 w-4 rounded-sm cursor-pointer border bg-transparent flex-shrink-0 ${checkboxClass} ${isDarkMode ? 'border-white/50' : 'border-black/50'}`}
+                  className={`h-5 w-5 rounded-sm cursor-pointer border bg-transparent flex-shrink-0 mt-1 ${checkboxClass} ${isDarkMode ? 'border-white/50' : 'border-black/50'}`}
                   aria-labelledby={`task-label-${task.id}`}
                 />
                 <label
@@ -67,12 +63,12 @@ const TodayTasks: React.FC<TodayTasksProps> = ({ schedules, categories, onToggle
                     {task.text}
                   </span>
                 </label>
-              </li>
+              </div>
             );
           })}
-        </ul>
+        </div>
       ) : (
-         <p className="text-sm text-center opacity-80 mt-2">
+         <p className="text-lg text-center opacity-80 mt-2">
             {translations.allTasksCompleted}
          </p>
       )}

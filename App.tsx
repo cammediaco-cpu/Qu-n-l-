@@ -458,15 +458,11 @@ const App: React.FC = () => {
   return (
     <div 
         ref={appRef}
-        className={`w-screen h-screen flex items-center justify-center p-4 cursor-pointer transition-colors duration-500 select-none overflow-hidden relative ${themeClass}`}
+        className={`w-screen h-screen flex flex-col cursor-pointer transition-colors duration-500 select-none overflow-hidden relative ${themeClass} pb-[50px]`}
         style={appStyle}
         onClick={handleToggleTheme}
     >
-      <div 
-        className="w-full h-full max-w-[1920px] max-h-[1080px] aspect-video relative flex flex-col shadow-2xl rounded-2xl overflow-hidden" 
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="absolute top-6 left-6 z-10 cursor-default" onClick={(e) => e.stopPropagation()}>
+       <div className="absolute top-6 left-6 z-10 cursor-default" onClick={(e) => e.stopPropagation()}>
            <ProfileManager
               profiles={profiles}
               activeProfile={activeProfile}
@@ -485,39 +481,36 @@ const App: React.FC = () => {
               isDarkMode={isDarkMode}
            />
         </div>
+      
+      <main 
+        className="flex-grow flex items-center justify-center min-h-0 cursor-default p-6 pt-20"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="w-full max-w-7xl flex items-start justify-between gap-16">
+            <Clock />
+            <TodayTasks 
+                schedules={schedules} 
+                categories={categories}
+                onToggleComplete={handleToggleComplete} 
+                isDarkMode={isDarkMode}
+            />
+        </div>
+      </main>
 
-        <main 
-            className="flex-grow grid grid-cols-2 grid-rows-2 h-full cursor-default"
-        >
-            {/* Top Left - Clock */}
-            <div className="flex items-center justify-center">
-                <Clock />
-            </div>
-
-            {/* Top Right - Today's Tasks */}
-            <div className="flex items-center justify-center">
-                <TodayTasks 
-                    schedules={schedules} 
-                    categories={categories}
-                    onToggleComplete={handleToggleComplete} 
-                    isDarkMode={isDarkMode}
-                />
-            </div>
-
-            {/* Bottom - WeekView */}
-            <div className="col-span-2 row-start-2 p-6 pt-0">
-                 <div className={`w-full h-full rounded-2xl shadow-lg p-4 flex flex-col overflow-hidden ${viewBgClass}`}>
-                    <WeekView
-                        schedules={schedules}
-                        categories={categories}
-                        onEdit={handleOpenModal}
-                        onDelete={handleDeleteSchedule}
-                        isDarkMode={isDarkMode}
-                    />
-                </div>
-            </div>
-        </main>
-      </div>
+      <footer 
+        className="h-[40vh] max-h-[400px] min-h-[300px] flex-shrink-0 p-6 pt-0 cursor-default"
+        onClick={(e) => e.stopPropagation()}
+      >
+           <div className={`w-full max-w-[1920px] mx-auto h-full rounded-2xl shadow-lg p-4 flex flex-col overflow-hidden ${viewBgClass}`}>
+              <WeekView
+                  schedules={schedules}
+                  categories={categories}
+                  onEdit={handleOpenModal}
+                  onDelete={handleDeleteSchedule}
+                  isDarkMode={isDarkMode}
+              />
+          </div>
+      </footer>
       
       {modalState.isOpen && (
         <ScheduleModal
@@ -551,7 +544,6 @@ const App: React.FC = () => {
         />
       )}
       {isImportModalOpen && (
-// Fix: Removed extraneous properties that are not defined in ImportProfileModalProps.
         <ImportProfileModal
             isOpen={isImportModalOpen}
             onClose={handleCloseImportModal}
