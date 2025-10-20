@@ -1,0 +1,27 @@
+export interface Schedule {
+  id: string;
+  day: number; // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  time: string;
+  text: string;
+  isCompleted: boolean;
+}
+
+export type ModalState = {
+  isOpen: boolean;
+  schedule: Schedule | null;
+};
+
+export interface AppSettings {
+  ringtoneUrl: string;
+  ringtoneDuration: number; // in seconds
+  voiceURI: string;
+  volume: number; // 0 to 1
+  notificationPrefix: string;
+  // Global Pre-notification settings
+  preNotificationEnabled: boolean;
+  preNotificationTime: number; // in minutes
+  preNotificationPrefix: string;
+  // Workday notifications
+  workdayNotificationsEnabled: boolean;
+  userName: string;
+}
