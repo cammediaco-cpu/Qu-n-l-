@@ -1,6 +1,41 @@
 
 import React, { useState, useEffect } from 'react';
-import { GoogleGenAI } from "@google/genai";
+
+// Helper to interpret WMO weather codes into Vietnamese
+const getWeatherDescription = (code: number): string => {
+  const descriptions: { [key: number]: string } = {
+    0: 'Trời quang',
+    1: 'Trời trong',
+    2: 'Ít mây',
+    3: 'Nhiều mây',
+    45: 'Sương mù',
+    48: 'Sương mù dày đặc',
+    51: 'Mưa phùn nhẹ',
+    53: 'Mưa phùn',
+    55: 'Mưa phùn dày',
+    56: 'Mưa phùn đông lạnh',
+    57: 'Mưa phùn đông lạnh dày',
+    61: 'Mưa nhỏ',
+    63: 'Mưa vừa',
+    65: 'Mưa to',
+    66: 'Mưa đông lạnh nhẹ',
+    67: 'Mưa đông lạnh to',
+    71: 'Tuyết rơi nhẹ',
+    73: 'Tuyết rơi vừa',
+    75: 'Tuyết rơi dày',
+    77: 'Hạt tuyết',
+    80: 'Mưa rào nhẹ',
+    81: 'Mưa rào vừa',
+    82: 'Mưa rào to',
+    85: 'Mưa tuyết nhẹ',
+    86: 'Mưa tuyết dày',
+    95: 'Dông',
+    96: 'Dông có mưa đá nhẹ',
+    99: 'Dông có mưa đá to',
+  };
+  return descriptions[code] || "Không xác định";
+};
+
 
 const Clock: React.FC = () => {
   const [time, setTime] = useState(new Date());
@@ -16,17 +51,24 @@ const Clock: React.FC = () => {
   useEffect(() => {
     const fetchWeather = async (lat: number, lon: number) => {
       try {
-        if (!process.env.API_KEY) {
-            setWeather('Thiếu API key của Gemini.');
-            return;
+        // Fetch city name first from Open-Meteo's geocoding API
+        const geoResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?latitude=${lat}&longitude=${lon}&count=1&language=vi&format=json`);
+        const geoData = await geoResponse.json();
+        const cityName = geoData?.results?.[0]?.name || '';
+
+        // Fetch weather data from Open-Meteo's forecast API
+        const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`);
+        const weatherData = await weatherResponse.json();
+        
+        if (weatherData && weatherData.current) {
+          const temp = Math.round(weatherData.current.temperature_2m);
+          const weatherCode = weatherData.current.weather_code;
+          const description = getWeatherDescription(weatherCode);
+          
+          setWeather(`${cityName ? cityName + ', ' : ''}${description} - ${temp}°C`);
+        } else {
+            setWeather("Không thể lấy dữ liệu thời tiết.");
         }
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const prompt = `Cung cấp thông tin thời tiết ngắn gọn (ví dụ: "Nắng", "Có mưa") và nhiệt độ theo độ C cho vị trí có vĩ độ ${lat} và kinh độ ${lon}. Định dạng: [Thành phố], [Thời tiết] - nhiệt độ [Nhiệt độ]`;
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-        });
-        setWeather(response.text);
       } catch (error) {
         console.error("Error fetching weather:", error);
         setWeather("Không thể lấy dữ liệu thời tiết.");
