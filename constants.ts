@@ -8,7 +8,11 @@ export const DEFAULT_PROFILE_NAME = 'Mặc định';
 export const DEFAULT_CATEGORIES = [];
 
 export const DEFAULT_RINGTONES = [
-  { name: 'Báo thức số', url: 'https://cdn.pixabay.com/audio/2021/08/04/audio_12b0c7443c.mp3' },
+  { name: 'chuông 01', url: 'https://cdn.pixabay.com/audio/2023/06/01/audio_77fe776ce5.mp3' },
+  { name: 'chuông 02', url: 'https://cdn.pixabay.com/audio/2025/01/11/audio_5e34842448.mp3' },
+  { name: 'chuông 03', url: 'https://cdn.pixabay.com/audio/2023/01/08/audio_85c2c37fef.mp3' },
+  { name: 'chuông 04', url: 'https://cdn.pixabay.com/audio/2025/09/25/audio_3ce458fb2a.mp3' },
+  { name: 'chuông 05', url: 'https://cdn.pixabay.com/audio/2025/09/25/audio_1c2207d92b.mp3' },
 ];
 
 export const DEFAULT_SETTINGS = {
