@@ -21,6 +21,8 @@ export type ModalState = {
 export interface AppSettings {
   ringtoneUrl: string;
   ringtoneDuration: number; // in seconds
+  isRingtoneEnabled: boolean;
+  isVoiceEnabled: boolean;
   voiceURI: string; // Updated from geminiVoice to browser's voiceURI
   volume: number; // 0 to 1
   notificationPrefix: string;

@@ -224,38 +224,45 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose
         audioRef.current.currentTime = 0;
     }
     window.speechSynthesis.cancel();
+    
+    let ringtonePlayed = false;
 
     // Play Ringtone
-    const ringtoneToPlay = allRingtones.find(r => r.name === localSettings.ringtoneUrl);
-    if (!ringtoneToPlay) {
-        console.error("Ringtone not found for preview:", localSettings.ringtoneUrl);
-        return;
+    if (localSettings.isRingtoneEnabled) {
+        const ringtoneToPlay = allRingtones.find(r => r.name === localSettings.ringtoneUrl);
+        if (ringtoneToPlay) {
+            const audio = new Audio(ringtoneToPlay.url);
+            audio.volume = localSettings.volume;
+            audio.play().catch(e => console.error("Error playing preview sound:", e));
+            audioRef.current = audio;
+            ringtonePlayed = true;
+
+            setTimeout(() => {
+              audio.pause();
+              audio.currentTime = 0;
+            }, localSettings.ringtoneDuration * 1000);
+        } else {
+             console.error("Ringtone not found for preview:", localSettings.ringtoneUrl);
+        }
     }
-
-    const audio = new Audio(ringtoneToPlay.url);
-    audio.volume = localSettings.volume;
-    audio.play().catch(e => console.error("Error playing preview sound:", e));
-    audioRef.current = audio;
-
-    setTimeout(() => {
-      audio.pause();
-      audio.currentTime = 0;
-    }, localSettings.ringtoneDuration * 1000);
     
     // Play Speech
-    const fullText = `${localSettings.notificationPrefix} ${translations.settings.previewText}`;
-    const utterance = new SpeechSynthesisUtterance(fullText);
-    const selectedVoice = availableVoices.find(v => v.voiceURI === localSettings.voiceURI);
-    
-    if (selectedVoice) {
-        utterance.voice = selectedVoice;
+    if (localSettings.isVoiceEnabled) {
+        const fullText = `${localSettings.notificationPrefix} ${translations.settings.previewText}`;
+        const utterance = new SpeechSynthesisUtterance(fullText);
+        const selectedVoice = availableVoices.find(v => v.voiceURI === localSettings.voiceURI);
+        
+        if (selectedVoice) {
+            utterance.voice = selectedVoice;
+        }
+        utterance.volume = localSettings.volume;
+        
+        // Schedule speech to play after ringtone
+        const speechDelay = ringtonePlayed ? (localSettings.ringtoneDuration * 1000) + 500 : 0;
+        setTimeout(() => {
+            window.speechSynthesis.speak(utterance);
+        }, speechDelay);
     }
-    utterance.volume = localSettings.volume;
-    
-    // Schedule speech to play after ringtone
-    setTimeout(() => {
-        window.speechSynthesis.speak(utterance);
-    }, (localSettings.ringtoneDuration * 1000) + 500);
   };
   
   const handleSave = () => {
@@ -306,62 +313,62 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose
         <div className="overflow-y-auto flex-grow pr-2 -mr-2">
             {activeTab === 'main' && (
                 <div className="space-y-4 text-sm">
-                    {/* Main Notification Settings */}
-                    <div>
-                        <label htmlFor="ringtone" className="block font-medium mb-1 opacity-80">{translations.settings.ringtone}</label>
-                        <div className="flex items-center gap-2">
-                        <select
-                            id="ringtone"
-                            value={localSettings.ringtoneUrl}
-                            onChange={(e) => handleChange('ringtoneUrl', e.target.value)}
-                            className={`w-full px-3 py-2 rounded-md border transition-colors ${themeClasses.input}`}
-                        >
-                            {allRingtones.map(ringtone => (
-                            <option className={themeClasses.option} key={ringtone.name} value={ringtone.name}>{ringtone.name}</option>
-                            ))}
-                        </select>
-                        {selectedRingtone?.id && (
-                            <button
-                                type="button"
-                                onClick={handleDeleteRingtone}
-                                title={`Xóa nhạc chuông "${selectedRingtone.name}"`}
-                                className="p-2 rounded-full text-red-500 hover:bg-red-500/10 transition-colors flex-shrink-0"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
+                    {/* Ringtone Settings */}
+                    <div className="flex items-center">
+                        <input type="checkbox" id="isRingtoneEnabled" checked={localSettings.isRingtoneEnabled} onChange={(e) => handleChange('isRingtoneEnabled', e.target.checked)} className={`h-4 w-4 rounded border-2 bg-transparent ${themeClasses.accentColor}`} />
+                        <label htmlFor="isRingtoneEnabled" className="ml-2 block font-medium opacity-80">{translations.settings.enableRingtone}</label>
+                    </div>
+                    <fieldset disabled={!localSettings.isRingtoneEnabled} className={`space-y-4 pl-6 border-l-2 ${themeClasses.border} disabled:opacity-50 transition-opacity`}>
+                        <div>
+                            <label htmlFor="ringtone" className="block font-medium mb-1 opacity-80">{translations.settings.ringtone}</label>
+                            <div className="flex items-center gap-2">
+                                <select id="ringtone" value={localSettings.ringtoneUrl} onChange={(e) => handleChange('ringtoneUrl', e.target.value)} className={`w-full px-3 py-2 rounded-md border transition-colors ${themeClasses.input}`}>
+                                    {allRingtones.map(ringtone => (
+                                    <option className={themeClasses.option} key={ringtone.name} value={ringtone.name}>{ringtone.name}</option>
+                                    ))}
+                                </select>
+                                {selectedRingtone?.id && (
+                                    <button type="button" onClick={handleDeleteRingtone} title={`Xóa nhạc chuông "${selectedRingtone.name}"`} className="p-2 rounded-full text-red-500 hover:bg-red-500/10 transition-colors flex-shrink-0">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    </button>
+                                )}
+                            </div>
+                            <button type="button" onClick={() => fileInputRef.current?.click()} className="opacity-80 hover:underline mt-2 text-sm">
+                                {translations.settings.uploadRingtone}
                             </button>
-                        )}
+                            <input type="file" accept="audio/*" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
                         </div>
-                        <button type="button" onClick={() => fileInputRef.current?.click()} className="opacity-80 hover:underline mt-2 text-sm">
-                            {translations.settings.uploadRingtone}
-                        </button>
-                        <input type="file" accept="audio/*" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
-                    </div>
+                        <div>
+                            <label htmlFor="duration" className="block font-medium mb-1 opacity-80">{translations.settings.duration}: {localSettings.ringtoneDuration}s</label>
+                            <input id="duration" type="range" min="1" max="10" step="1" value={localSettings.ringtoneDuration} onChange={(e) => handleChange('ringtoneDuration', Number(e.target.value))} className={`w-full h-2 rounded-lg appearance-none cursor-pointer ${themeClasses.rangeTrack} ${themeClasses.accentColor}`} />
+                        </div>
+                    </fieldset>
 
-                    <div>
-                        <label htmlFor="duration" className="block font-medium mb-1 opacity-80">{translations.settings.duration}: {localSettings.ringtoneDuration}s</label>
-                        <input id="duration" type="range" min="1" max="10" step="1" value={localSettings.ringtoneDuration} onChange={(e) => handleChange('ringtoneDuration', Number(e.target.value))} className={`w-full h-2 rounded-lg appearance-none cursor-pointer ${themeClasses.rangeTrack} ${themeClasses.accentColor}`} />
+                    {/* Voice Settings */}
+                    <div className="flex items-center pt-2">
+                        <input type="checkbox" id="isVoiceEnabled" checked={localSettings.isVoiceEnabled} onChange={(e) => handleChange('isVoiceEnabled', e.target.checked)} className={`h-4 w-4 rounded border-2 bg-transparent ${themeClasses.accentColor}`} />
+                        <label htmlFor="isVoiceEnabled" className="ml-2 block font-medium opacity-80">{translations.settings.enableVoice}</label>
                     </div>
+                    <fieldset disabled={!localSettings.isVoiceEnabled} className={`space-y-4 pl-6 border-l-2 ${themeClasses.border} disabled:opacity-50 transition-opacity`}>
+                         <div>
+                            <label htmlFor="prefix" className="block font-medium mb-1 opacity-80">{translations.settings.notificationPrefixLabel}</label>
+                            <input id="prefix" type="text" placeholder={translations.settings.notificationPrefixPlaceholder} value={localSettings.notificationPrefix} onChange={(e) => handleChange('notificationPrefix', e.target.value)} className={`w-full px-3 py-2 rounded-md border transition-colors ${themeClasses.input}`} />
+                        </div>
+                        <div>
+                            <label htmlFor="voice" className="block font-medium mb-1 opacity-80">{translations.settings.voice}</label>
+                            <select id="voice" value={localSettings.voiceURI} onChange={(e) => handleChange('voiceURI', e.target.value)} className={`w-full px-3 py-2 rounded-md border transition-colors ${themeClasses.input}`}>
+                                <option value="">{translations.settings.defaultVoice}</option>
+                                {availableVoices.map(voice => (
+                                    <option className={themeClasses.option} key={voice.voiceURI} value={voice.voiceURI}>
+                                        {voice.name} ({voice.lang})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    </fieldset>
 
-                    <div>
-                        <label htmlFor="prefix" className="block font-medium mb-1 opacity-80">{translations.settings.notificationPrefixLabel}</label>
-                        <input id="prefix" type="text" placeholder={translations.settings.notificationPrefixPlaceholder} value={localSettings.notificationPrefix} onChange={(e) => handleChange('notificationPrefix', e.target.value)} className={`w-full px-3 py-2 rounded-md border transition-colors ${themeClasses.input}`} />
-                    </div>
-
-                    <div>
-                        <label htmlFor="voice" className="block font-medium mb-1 opacity-80">{translations.settings.voice}</label>
-                        <select id="voice" value={localSettings.voiceURI} onChange={(e) => handleChange('voiceURI', e.target.value)} className={`w-full px-3 py-2 rounded-md border transition-colors ${themeClasses.input}`}>
-                            <option value="">{translations.settings.defaultVoice}</option>
-                            {availableVoices.map(voice => (
-                                <option className={themeClasses.option} key={voice.voiceURI} value={voice.voiceURI}>
-                                    {voice.name} ({voice.lang})
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div>
+                    {/* Volume Settings */}
+                    <div className="pt-2">
                         <label htmlFor="volume" className="block font-medium mb-1 opacity-80">{translations.settings.volume}: {Math.round(localSettings.volume * 100)}%</label>
                         <input id="volume" type="range" min="0" max="1" step="0.05" value={localSettings.volume} onChange={(e) => handleChange('volume', Number(e.target.value))} className={`w-full h-2 rounded-lg appearance-none cursor-pointer ${themeClasses.rangeTrack} ${themeClasses.accentColor}`} />
                     </div>

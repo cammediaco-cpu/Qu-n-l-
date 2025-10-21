@@ -174,40 +174,47 @@ const App: React.FC = () => {
 
 
   const triggerUnifiedNotification = useCallback(async (speechJobs: { text: string }[]) => {
-    const ringtoneIdentifier = settings.ringtoneUrl;
-    let ringtone = allRingtones.find(r => r.name === ringtoneIdentifier);
-    if (!ringtone) {
-        ringtone = allRingtones.find(r => r.url === ringtoneIdentifier);
+    let ringtonePlayed = false;
+
+    if (settings.isRingtoneEnabled) {
+        const ringtoneIdentifier = settings.ringtoneUrl;
+        let ringtone = allRingtones.find(r => r.name === ringtoneIdentifier);
+        if (!ringtone) {
+            ringtone = allRingtones.find(r => r.url === ringtoneIdentifier);
+        }
+        const urlToPlay = ringtone ? ringtone.url : DEFAULT_RINGTONES[0].url;
+
+        const ringtoneAudio = new Audio(urlToPlay);
+        ringtoneAudio.volume = settings.volume;
+        ringtoneAudio.play().catch(e => console.error("Error playing sound:", e));
+        ringtonePlayed = true;
+        
+        setTimeout(() => {
+            ringtoneAudio.pause();
+            ringtoneAudio.currentTime = 0;
+        }, settings.ringtoneDuration * 1000);
     }
-    const urlToPlay = ringtone ? ringtone.url : DEFAULT_RINGTONES[0].url;
 
-    const ringtoneAudio = new Audio(urlToPlay);
-    ringtoneAudio.volume = settings.volume;
-    ringtoneAudio.play().catch(e => console.error("Error playing sound:", e));
-    
-    setTimeout(() => {
-        ringtoneAudio.pause();
-        ringtoneAudio.currentTime = 0;
-    }, settings.ringtoneDuration * 1000);
+    if (settings.isVoiceEnabled) {
+        const combinedText = speechJobs.map(job => job.text).join('. ');
+        if (combinedText.trim().length === 0) return;
+        
+        // Use browser's SpeechSynthesis API
+        const utterance = new SpeechSynthesisUtterance(combinedText);
+        const voices = window.speechSynthesis.getVoices();
+        const selectedVoice = voices.find(v => v.voiceURI === settings.voiceURI);
 
-    const combinedText = speechJobs.map(job => job.text).join('. ');
-    if (combinedText.trim().length === 0) return;
-    
-    // Use browser's SpeechSynthesis API
-    const utterance = new SpeechSynthesisUtterance(combinedText);
-    const voices = window.speechSynthesis.getVoices();
-    const selectedVoice = voices.find(v => v.voiceURI === settings.voiceURI);
+        if (selectedVoice) {
+            utterance.voice = selectedVoice;
+        }
+        utterance.volume = settings.volume;
 
-    if (selectedVoice) {
-        utterance.voice = selectedVoice;
+        // Schedule speech to play after ringtone with a small delay
+        const speechDelay = ringtonePlayed ? (settings.ringtoneDuration * 1000) + 500 : 0;
+        setTimeout(() => {
+            window.speechSynthesis.speak(utterance);
+        }, speechDelay);
     }
-    utterance.volume = settings.volume;
-
-    // Schedule speech to play after ringtone with a small delay
-    setTimeout(() => {
-        window.speechSynthesis.speak(utterance);
-    }, (settings.ringtoneDuration * 1000) + 500);
-
   }, [settings, allRingtones]);
   
   // Helper function to show system notifications

@@ -18,6 +18,8 @@ export const DEFAULT_RINGTONES = [
 export const DEFAULT_SETTINGS = {
   ringtoneUrl: DEFAULT_RINGTONES[0].name,
   ringtoneDuration: 3, // seconds
+  isRingtoneEnabled: true,
+  isVoiceEnabled: true,
   voiceURI: '', // Use browser's default voice
   volume: 0.8, // 80%
   notificationPrefix: 'Đã đến giờ:',
@@ -91,6 +93,8 @@ export const translations = {
   },
   settings: {
     title: 'Cài Đặt Thông Báo',
+    enableRingtone: 'Bật nhạc chuông',
+    enableVoice: 'Bật giọng đọc',
     ringtone: 'Nhạc chuông',
     uploadRingtone: 'Tải lên nhạc chuông',
     uploaded: 'Đã tải lên',
